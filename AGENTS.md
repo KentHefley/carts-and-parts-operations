@@ -18,7 +18,7 @@ If the installed Next.js version generates a section delimited by `<!-- BEGIN:ne
 
 Work on the Carts and Parts, Inc. internal sales order and scheduling application. The goal is to replace the required Monday.com workflows with dependable software that reduces recurring costs and is understandable to its maintainer, Kent.
 
- It does not authorize production deployment, purchases, migration, or changes to Monday.com. Do not import names, credentials, schemas, routes, or business rules from unrelated example projects.
+ This file does not authorize production deployment, purchases, migration, or changes to Monday.com. Do not import names, credentials, schemas, routes, or business rules from unrelated example projects.
 
 ## Scope
 
@@ -40,8 +40,8 @@ Do not introduce accounting, payroll, inventory synchronization, PTO accrual, of
 ## Current decisions and open questions
 
 - Confirmed direction: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui, and Vercel hosting during development, pilot, and live operation.
-- - Confirmed authentication provider: Clerk. Access is invitation-only, using approved employee email addresses with email/password sign-in and password recovery. Public self-registration and social sign-in, including Google, must be disabled. Start without MFA; preserve the ability to enable it later.
-- Proposed integrations: Neon PostgreSQL, Prisma, Clerk, Resend, Cloudflare R2, and FullCalendar Standard. Confirm compatibility, licenses, and the repository's actual choices before installing them. Do not silently substitute providers.
+- Confirmed authentication provider: Clerk. Access is invitation-only, using approved employee email addresses with email/password sign-in and password recovery. Public self-registration and social sign-in, including Google, must be disabled. Start without MFA; preserve the ability to enable it later.
+- Proposed integrations: Neon PostgreSQL, Prisma, Resend, Cloudflare R2, and FullCalendar Standard. Confirm compatibility, licenses, and the repository's actual choices before installing them. Do not silently substitute providers.
 - Use free tiers where suitable for the pilot; verify commercial-use terms and limits. Do not subscribe to paid services without authorization.
 - Planning target: approximately $100/month including contingency. This is an estimate, not a guaranteed bill. Recheck pricing when making service decisions.
 - Historical orders: full import, separate archive, or a fresh start remains undecided. Preserve the ability to map external records later; do not assume permission to discard history.
