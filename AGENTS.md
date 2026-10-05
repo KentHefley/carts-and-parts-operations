@@ -18,7 +18,7 @@ If the installed Next.js version generates a section delimited by `<!-- BEGIN:ne
 
 Work on the Carts and Parts, Inc. internal sales order and scheduling application. The goal is to replace the required Monday.com workflows with dependable software that reduces recurring costs and is understandable to its maintainer, Kent.
 
- This file does not authorize production deployment, purchases, migration, or changes to Monday.com. Do not import names, credentials, schemas, routes, or business rules from unrelated example projects.
+This file does not authorize production deployment, purchases, migration, or changes to Monday.com. Do not import names, credentials, schemas, routes, or business rules from unrelated example projects.
 
 ## Scope
 
@@ -33,7 +33,7 @@ Build incrementally:
 - Downloadable reports in Excel, CSV, and PDF.
 - Employee accounts, server-side permissions, administrator settings, and important change history.
 
-First milestone: create a sales order, save it to the database, and reopen it. Finish and verify each milestone before expanding scope.
+Before writing application code, review the agreed requirements, permissions, screen plan, field inventory, wireframes and styling with Kent. The first implementation milestone remains creating, saving and reopening an order with authenticated access. Finish and verify each milestone before expanding scope.
 
 Do not introduce accounting, payroll, inventory synchronization, PTO accrual, offline operation, AI features, or a fully customizable report builder without a requested scope change.
 
@@ -45,9 +45,21 @@ Do not introduce accounting, payroll, inventory synchronization, PTO accrual, of
 - Use free tiers where suitable for the pilot; verify commercial-use terms and limits. Do not subscribe to paid services without authorization.
 - Planning target: approximately $100/month including contingency. This is an estimate, not a guaranteed bill. Recheck pricing when making service decisions.
 - Historical orders: full import, separate archive, or a fresh start remains undecided. Preserve the ability to map external records later; do not assume permission to discard history.
-- Still to define: required fields by job type, order-number starting point, status transitions, permission matrix, notification rules, report calculations, and retention policies.
+- Agreed behavior is documented in `docs/requirements.md` and `docs/screens.md`; unresolved details are tracked in `docs/decisions.md`. Do not replace confirmed rules with assumptions.
 
 Keep confirmed requirements and unresolved decisions in project documentation. Do not treat an assumption as an approved business rule.
+
+## Project specification
+
+Read `docs/requirements.md`, `docs/screens.md`, and `docs/decisions.md` before relevant design or implementation work. These describe agreed requirements, not implemented functionality. Preserve every existing Monday order field through an explicit inventory/mapping. Update supporting documents as decisions change; keep detailed field lists and screen layouts out of this file.
+
+- Only Name is required; orders autosave with visible failure feedback and same-field conflict protection.
+- Complete and Voided belong to Completed Sales Orders; other statuses belong to Sales Orders. Completed records remain editable by all approved users.
+- Original creator is immutable. Creator/admin alone can send SO email or delete an order. Reports, calendars, price book replacement and user administration are admin-controlled.
+- Assignment triggers bell notifications, never email. Send SO Email explicitly sends selected fields (including blanks) to current assignees; no file attachments. Save pending changes before capturing the email snapshot.
+- Assignees/admins upload/delete attachments; all approved users view/download them. Record comment/file actions in immutable audit history.
+- Deleted orders have a 30-day admin-only Trash with restore, then permanent cleanup and minimal audit retention. Individual attachment/comment deletions have no restoration.
+- Reports use Date Entered and exclude Voided and Trash; product/customer filters use case-insensitive contains matching.
 
 ## Working method
 
@@ -81,7 +93,7 @@ Do not use parallel subagents unless explicitly requested. Keep exploration and 
 - Closing an order must retain its identity, details, attachments, and history. Present closed orders through a view/filter rather than copying records into a separate table.
 - Define permitted status transitions and who may close, void, or reopen an order. Record actor, timestamp, and relevant changes. Do not hard-delete orders by default.
 - Distinguish estimated order value, final billed value, and payment received. Never label one as another in reports.
-- Reports must clearly state filters, date basis, and calculation definitions. Apply the same permissions as the underlying records, and protect CSV/Excel exports from spreadsheet formula injection.
+- Reports must clearly state filters, date basis, and calculation definitions. Enforce admin-only report generation/download even though all users can view orders. Protect CSV/Excel exports from spreadsheet formula injection.
 
 ## Notifications and attachments
 
@@ -98,7 +110,7 @@ Do not use parallel subagents unless explicitly requested. Keep exploration and 
 - Store timed events with a defined time zone policy; treat all-day dates separately so they do not shift between locations.
 - Support start/end dates and define recurrence and exceptions before implementing repeating events.
 - Validate and authorize calendar changes on the server. Restore the displayed position if a drag-and-drop save fails.
-- A sales order calendar should derive job dates from the order records rather than duplicate them into unrelated events.
+- Both calendars are manually maintained by admins. Scheduled Job Date must not create or update calendar entries.
 - Time off scheduling does not imply approval workflows or balance/accrual calculations.
 
 ## Security and environments
@@ -131,7 +143,7 @@ Do not use parallel subagents unless explicitly requested. Keep exploration and 
 - Code rollback does not undo database changes. Document separate recovery procedures and obtain authorization before destructive live changes.
 - Schedule backups covering database records and required files; define retention and periodically prove restoration. Do not assume database backups include attachment bytes.
 - Before canceling Monday.com, verify any required historical export includes actual files and their order associations, not links dependent on Monday access.
-- Maintain supporting documents as they become relevant: `docs/requirements.md`, `docs/decisions.md`, `docs/testing.md`, `docs/deployment.md`, and `docs/progress.md`. These are intended paths, not a claim that the files already exist.
+- Maintain supporting documents as they become relevant: `docs/requirements.md`, `docs/screens.md`, `docs/decisions.md`, `docs/testing.md`, `docs/deployment.md`, and `docs/progress.md`. These are intended paths, not a claim that the files already exist.
 - Record implemented features, checks, unresolved issues, and the next milestone so work can continue in a new session.
 
 Keep this file concise and current. Move detailed schemas and procedures into supporting documentation. Update instructions when the agreed architecture or business rules change.
