@@ -115,7 +115,13 @@ Time Off/Birthday Calendar categories: Time Off, Birthday, Work Anniversary, Hol
 
 ## Price books and reports
 
-Yellow, Blue and White retain only the current PDF. Admin replacements remove old bytes after new upload succeeds; log actor/time. All users view PDF in new browser tab or download.
+Yellow, Blue and White retain only the current PDF. Admin replacements remove old bytes after new upload succeeds; log actor/time. Use Yellow/Blue/White tabs with one selected book displayed inside the app, including page navigation and zoom. Viewing does not automatically download a file or open a separate browser tab. Download remains a separate option for all approved users. This supersedes the earlier new-tab/card design.
+
+View Book opens an in-app viewer overlay with a page selector and previous/next controls. Only admins see Replace PDF; enforce administrator authorization on replacement requests regardless of UI visibility.
+
+Each book has an admin-editable edition date, displayed as month/year beside the page count (for example, September 2026). This is separate from the automatic upload/replacement timestamp; changing the edition date does not replace or modify the PDF. Audit edition-date changes and enforce admin permissions server-side.
+
+Retain original uploaded PDF bytes without compression or conversion into low-resolution page images. The production viewer renders the original PDF at a resolution suitable for screen and zoom; Download returns the original file. Compressed page images in the planning mockup are previews only, not the production storage/viewing approach.
 
 Admin-only reports:
 1. Sales by date range.

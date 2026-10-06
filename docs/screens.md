@@ -6,6 +6,8 @@ Agreed direction, October 5, 2026. This is a browser-based responsive web app. S
 
 Carts and Parts logo; collapsible left sidebar on large screens, icon tooltips when collapsed, remembered user preference. On phones use a collapsible navigation menu. Top bar contains page title, notification bell, light/dark toggle and user menu. Remember theme preference.
 
+The bell is red when unread notifications exist and displays an unread count. With no unread notifications, show a neutral bell. Provide an accessible unread-count label and Mark all as read action; opening the panel alone does not clear unread notifications.
+
 Navigation: Dashboard, Sales Orders, Completed Sales Orders, Price Books, Calendar, Time Off/Birthday Calendar. Admins also see Reports and Administration; Trash is inside Administration. Enforce permissions on the server, not solely navigation.
 
 Use neutral readable backgrounds with blue primary accents and orange-yellow selected buttons/highlights. Distinguish destructive actions. Exact colors, logo asset, typography and component treatment await mockup review. Support both light/dark contrast, keyboard access, readable tables and form labels.
@@ -28,6 +30,8 @@ Compact table; no inline field editing. Click order to open wide slide-out form 
 
 Tabs: Order Details, Files, Updates, Activity Log.
 
+Clicking Order Details returns to the top of the order form, including when Order Details is already selected. In the working slide-out form, scroll its content area rather than the underlying order list.
+
 Status is a color-coded box with a clickable choice menu, not a native select dropdown. Show the status label as well as color. Exact color assignments await styling review. Division offers Oklahoma City, Dallas/Fort Worth, Houston, San Antonio, Phoenix, Cleveland and Corporate, retaining a blank selection on new/copied orders.
 
 Assigned To shows selected employees with individual remove actions and a dropdown containing only unassigned active employees. Selecting a person removes them from that dropdown; removing them from Assigned To restores their availability. Do not show Monday Item ID as an employee-facing field.
@@ -35,6 +39,8 @@ Assigned To shows selected employees with individual remove actions and a dropdo
 New Order immediately generates and displays a unique SO Number in the read-only field, before Name entry. The working app allocates it from the company-wide sequence server-side; the wireframe uses an isolated DEMO sequence.
 
 Completion: Closed Out By and Closed Out Date are required when marking Complete or Voided; ordinary draft saving still needs only Name. Put Mark Complete and Mark Voided at the bottom, underneath the fields. Both actions route the record into Completed Sales Orders. Omit the Legacy Voided checkbox.
+
+Use plain field labels in Service and Labor: Labor Price, Travel Price, AM Description, Freight and Hours Worked. Do not append implementation annotations such as manual, text or calculated. Document input types and calculation behavior separately; Hours Worked remains read-only and calculated.
 
 Detail section order:
 1. Order Overview
@@ -52,7 +58,11 @@ Files: Add File and drag/drop, file list with preview/download, uploader/time; u
 
 ## Price Books
 
-Three cards: Yellow, Blue, White. View PDF opens new tab; Download available to all users. Last-updated date; admin-only Replace PDF. No past-version browser.
+Yellow, Blue and White tabs select one book in a shared in-app PDF viewer. Include page navigation and zoom, a separate Download action for all users, and admin-only Replace PDF. Display last-updated date from upload metadata. Do not open a separate browser tab or automatically download on viewing. No past-version browser. This supersedes the earlier three-card/new-tab plan.
+
+View Book opens an in-app overlay containing the selected PDF, a direct page selector, previous/next page controls and Close. Support Escape, focus containment and return focus to View Book on close. Replace PDF is visible only to admins and replacement authorization is enforced server-side. The role switch in the mockup is a review aid, not a production feature; production roles come from the authenticated account.
+
+Display an admin-editable edition month/year beside the page count. Users can read the date; only admins can edit it. Keep the automatic upload/replacement timestamp separate. The production viewer uses the original PDF with sharp rendering at each zoom level, rather than the compressed images used in the mockup.
 
 ## Calendars
 

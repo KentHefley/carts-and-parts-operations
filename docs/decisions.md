@@ -18,7 +18,7 @@
 | Fixed email field selection, blanks retained, no attachments | Managers see omitted entries; email deliberately differs from full form |
 | 30-day admin Trash for orders; permanent individual file/comment deletion | Recovery for orders without adding individual restore features |
 | Manual admin-maintained calendars visible to everyone | Scheduling visibility, not PTO approval or automatic order scheduling |
-| Current-only price books, PDFs open in new tab | Simple distribution and replacement |
+| Current-only price books, tab selection and in-app PDF viewing | Kent's latest review replaces the cards/new-tab proposal; Download remains separate |
 | Admin reports use Date Entered, exclude Voided and Trash | Agreed reporting scope |
 | Case-insensitive contains matching on free-text product/customer fields | Support existing entry habits without requiring a catalog |
 | Dashboard cards plus active assigned orders; no calendar widgets | Keep landing screen focused |
