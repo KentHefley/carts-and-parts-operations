@@ -68,6 +68,8 @@ Display an admin-editable edition month/year beside the page count. Users can re
 
 Calendar for management schedules; Time Off/Birthday Calendar for informational employee events. Month default plus Week/Day. Everyone sees all events. Admin entry/edit/delete/recurrence controls. Event local time-zone labels, stable all-day dates. Employee calendar categories have color plus visible text.
 
+Month/Week day boxes use full-width, single-line event bars with ellipsis for long titles, following Kent's reference. Do not wrap event titles or crowd boxes with secondary details. Full title, time/time zone and event details remain accessible on hover/focus/tap and in the event overlay. Show a +N more control on crowded days, opening the day's events. Keep separate clickable bars so users can identify which event they are opening.
+
 ## Reports (admin only)
 
 Date Entered range controls, product-description and Invoice To contains searches, results and clearly labeled totals. Excel/CSV/PDF exports. Exclude Voided and Trash. Product reports show both matching product value and whole-order value without duplicate order totals.
