@@ -1,0 +1,11 @@
+﻿"SAMPLE - Fictional orders"
+"Sales by Date"
+"Date Entered: 2026-10-01 through 2026-10-07 inclusive; America/Chicago"
+"All eligible orders"
+"Voided and Trash excluded; order value is not payment received"
+
+"SO Number","Name","Date Entered","Status","Division","Invoice To","Full Order Total"
+"DEMO-103","Sample Market - North","2026-10-07","In Progress","Oklahoma City","Sample Market","275"
+"DEMO-102","Sample Store - West","2026-10-06","Expedite","Houston","Sample Store","350"
+"DEMO-100","Sample Market - South","2026-10-02","Complete","Dallas/Fort Worth","Sample Market","300"
+"TOTAL","","","","","","925"

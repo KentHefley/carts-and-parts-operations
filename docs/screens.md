@@ -20,8 +20,10 @@ Landing screen after sign-in. Navigation cards for the five primary sections; ad
 
 Sales Orders contains active statuses; Completed Sales Orders contains Complete/Voided.
 Columns: SO Number, Name, Status, Division, Job Type, Scheduled Job Date, Assigned To.
-Search: SO number, Name, Store Number, Purchase Order.
+Every result row displays its order values in all seven columns. Show an em dash for blank optional values; do not leave ambiguous empty cells. SO Number is visibly displayed and can open the order.
+Search by Name appears at the top of the fields and matches Name only. A separate SO Number search precedes Status. Store Number and Purchase Order search are omitted, per Kent's October 7 correction.
 Filters: Status, Division, Job Type, Assigned To, Scheduled Job Date.
+Kent's October 7 review: Search by Name is the top field; put the dedicated SO Number search before the Status filter below it. Apply this order to both active and completed order lists.
 Sortable column headings toggle ascending/descending. Active default: newest Date Entered first. Completed default: latest completion/void event first. Preserve query, filters, sort and position when closing form.
 
 Compact table; no inline field editing. Click order to open wide slide-out form on larger screens; full-screen form on mobile. Direct order navigation/link behavior remains to be specified.

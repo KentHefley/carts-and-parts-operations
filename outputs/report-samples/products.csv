@@ -1,0 +1,9 @@
+﻿"SAMPLE - Fictional orders"
+"Products"
+"Date Entered: 2026-10-01 through 2026-10-07 inclusive; America/Chicago"
+"Product number/title contains WH515PO"
+"Voided and Trash excluded; order value is not payment received"
+
+"Product Number","Product Title","Quantity Sold","Product Sales"
+"WH515PO","5 X 1.25 Poly","30","174.3"
+"TOTAL","","30","174.3"
