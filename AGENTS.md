@@ -12,7 +12,7 @@ Before writing or changing Next.js code, confirm the installed version and read 
 
 Prefer the bundled documentation at `node_modules/next/dist/docs/` when available. Resolve the path from the application package; in a monorepo, the `next` package may not be installed at the repository root. If bundled documentation is unavailable, use official documentation appropriate to the installed version.
 
-If the installed Next.js version generates a section delimited by `<!-- BEGIN:nextjs-agent-rules -->` and `<!-- END:nextjs-agent-rules -->`, retain that generated section and keep project-specific instructions outside it. Do not assume automatic generation or a particular internal generator path exists without checking the installed package. Resolve duplicate guidance when adding a generated section so the file remains consistent.
+Retain any generated Next.js agent-rules block and keep project-specific instructions outside it. Resolve duplicate guidance so this file remains consistent.
 
 ## Purpose and status
 
@@ -147,3 +147,13 @@ Do not use parallel subagents unless explicitly requested. Keep exploration and 
 - Record implemented features, checks, unresolved issues, and the next milestone so work can continue in a new session.
 
 Keep this file concise and current. Move detailed schemas and procedures into supporting documentation. Update instructions when the agreed architecture or business rules change.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
