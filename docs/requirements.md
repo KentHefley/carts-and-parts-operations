@@ -6,6 +6,8 @@ The reference-based inventory is in `field-inventory.md`. It distinguishes verif
 
 ## Access and permissions
 
+October 7 clarification: field-definition add/edit/reorder/deactivation and calendar category configuration are admin-only, enforced server-side. This restriction does not change approved users' permission to edit order values. Calendar categories belong specifically to the Time Off/Birthday Calendar, not the management Calendar. Field-definition editing may adjust permitted labels and placement; core business behavior is protected and saved-data type changes require compatibility handling.
+
 Access is invitation-only through Clerk using approved employee emails, email/password and password recovery. Disable public registration and social sign-in. MFA is deferred.
 
 | Action | Approved User | Admin |
@@ -40,6 +42,10 @@ The supplied Job Type list has no Service or Maint/Service choice. Do not silent
 Status uses a color-coded box like Monday.com rather than a native select dropdown in the order form. Clicking the box exposes the five agreed status choices. Pair colors with readable status labels. The initial wireframe colors are proposals pending styling review. List filter controls are separate from the form's status editor.
 
 ## Orders and persistence
+
+Admin-only custom field deletion is available in addition to deactivation. Deactivation preserves saved values/history. Deletion permanently removes the custom field and its current saved values; show the affected-order count and obtain explicit confirmation before deletion, particularly when values exist. Core fields necessary for app behavior cannot be deleted. Preserve immutable audit history; precise historical rendering and deletion mechanics must be specified before implementation. Field deletion is separate from 30-day order Trash.
+
+October 7 scope addition approved by Kent: admins can add optional custom sales-order fields, select their input type, choose a form section and arrange their position/order, preview and save the layout, and deactivate fields while preserving saved values/history. Initial types: text, long text, number, currency, date, time, dropdown, checkbox and employee selection. Core fields retain required business behavior. Custom fields do not automatically change calculations, reports or the fixed SO email template. Precise placement controls, schema/version handling, type changes, validation, copy behavior and print/export inclusion need definition before implementation. This is a configurable-form extension, not authorization for a general report builder.
 
 - Name is free text and the only required field for ordinary saving. Marking Complete or Voided additionally requires Closed Out By and Closed Out Date, as clarified by Kent during wireframe review. Whitespace-only required text does not satisfy validation. Store number and SO number are separate fields.
 - Default status: In Progress. Statuses: Pending, In Progress, Expedite, Complete, Voided.

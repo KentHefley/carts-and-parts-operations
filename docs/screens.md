@@ -78,6 +78,8 @@ Date Entered range controls, product-description and Invoice To contains searche
 
 ## Administration (admin only)
 
+Use Add Sales Order Field as the navigation button label for field configuration, per Kent's review. This screen also provides admin-only editing of existing field definitions.
+
 - User invitations, deactivation and User/Admin roles.
 - Employee directory including employees without accounts.
 - Dropdown choices (Division, Job Type, Terms, Price Level and other mapped choices): add/change/deactivate, preserve existing values.
