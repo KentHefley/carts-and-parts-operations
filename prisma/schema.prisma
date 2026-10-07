@@ -21,4 +21,42 @@ model AppUser {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  orders      SalesOrder[]
+  events      OrderEvent[]
+}
+
+model SalesOrder {
+  id         String @id @default(uuid()) @db.Uuid
+  number     Int @unique @default(autoincrement())
+  requestKey String @db.Uuid
+  creatorId  String @db.Uuid
+  creator    AppUser @relation(fields: [creatorId], references: [id])
+  name       String?
+  fields     Json @default("{}")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  items      OrderItem[]
+  events     OrderEvent[]
+  @@unique([creatorId, requestKey])
+}
+
+model OrderItem {
+  id          String @id @default(uuid()) @db.Uuid
+  orderId     String @db.Uuid
+  order       SalesOrder @relation(fields: [orderId], references: [id])
+  position    Int
+  description String @default("")
+  quantity    Decimal? @db.Decimal(20, 6)
+  unitPrice   Decimal? @db.Decimal(20, 2)
+  @@unique([orderId, position])
+}
+
+model OrderEvent {
+  id        String @id @default(uuid()) @db.Uuid
+  orderId   String @db.Uuid
+  order     SalesOrder @relation(fields: [orderId], references: [id])
+  actorId   String @db.Uuid
+  actor     AppUser @relation(fields: [actorId], references: [id])
+  createdAt DateTime @default(now())
+  changes   Json
 }

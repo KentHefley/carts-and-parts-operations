@@ -13,7 +13,8 @@
     "db:check": "tsx scripts/check-database.ts",
     "db:migrate:development": "tsx scripts/migrate-development.ts",
     "admin:bootstrap:development": "tsx scripts/bootstrap-admin.ts",
-    "test:access": "tsx --test tests/access-policy.test.ts"
+    "test:access": "tsx --test tests/access-policy.test.ts",
+    "test:orders": "tsx scripts/test-orders.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.11",
