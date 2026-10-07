@@ -28,6 +28,12 @@ Neon PostgreSQL, Prisma, Resend, Cloudflare R2 and FullCalendar Standard remain 
 
 ## Required work before implementation
 
+October 7 setup: Kent identified kent@cartsandparts.com as the initial administrator account. Provision this explicit account after verifying its Clerk identity; never promote the first arbitrary login. Recommended bootstrap is a one-time development provisioning command, with ordinary signed-in accounts denied data access until an active approved-user record exists. Prevent demoting/deactivating the last active admin when account administration is implemented. Bootstrap mechanics remain a recommendation pending implementation review.
+
+October 7 database compatibility review: Prisma's current supported-databases documentation confirms Neon PostgreSQL support and describes Prisma 8 PostgreSQL as a release candidate. Stable Prisma 7 is recommended for this business application; Kent is being asked to select the major before installation. No ORM packages or database schema changes have been made. Source: https://www.prisma.io/docs/orm/supported-databases
+
+Kent subsequently selected Prisma 7 stable. Prisma CLI/client/PostgreSQL adapter 7.10.0 are installed and the development connection passed a read-only query. The local schema is prepared but not migrated. This confirms Neon/Prisma choices; Resend, R2 and FullCalendar remain proposed.
+
 Latest October 6 completion correction: Closed Out By and Closed Out Date are required for Complete and Voided, superseding Name-only closeout. Keep ordinary draft saving Name-only. Both bottom-positioned completion buttons move the record into Completed Sales Orders; the status-box path must enforce the same validation. Remove the legacy Voided checkbox from the new workflow. Automatic Completed By/Completion Date and Voided By/Voided Date still record the actor/event independently of these closeout inputs.
 
 October 6 clarification: Monday Item ID is not a company-facing field. Omit it from the order form; retain the application's independent stable internal ID. An external Monday item reference is conditional on a later approved migration/integration. Assigned To must be unique per employee/order, remove selected employees from the available dropdown, and return removed active employees to it. Enforce this on the server as well as in the UI.

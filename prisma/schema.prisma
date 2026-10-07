@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// Login approval is separate from Clerk authentication and employee records.
+model AppUser {
+  id          String   @id @default(uuid()) @db.Uuid
+  clerkUserId String   @unique
+  email       String   @unique
+  role        UserRole @default(USER)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

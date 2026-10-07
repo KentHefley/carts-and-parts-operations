@@ -31,4 +31,6 @@ Confirm the proposed Neon PostgreSQL and Prisma choices after compatibility/term
 
 ## Repository inspection
 
+October 7 update: Clerk 7.9.11 is connected and Kent demonstrated local sign-in. Kent selected Neon plus Prisma 7; pinned 7.10.0 CLI/client/PG adapter are installed and a read-only database connection passed. The initial local user schema is valid but has not been migrated; no administrator has yet been provisioned. Earlier inspection notes below describe the starter at preparation time.
+
 October 7 package.json declares Next.js 16.3.8, React/React DOM 19.2.8, Tailwind 4 and TypeScript 5. Scripts: dev, build, start, lint. Clerk, Prisma and database integrations are not declared. Confirm installed versions and read version-matched Next.js documentation before application changes. The existing app is a starter, not the interactive planning mockups. Local Git status was clean at the start of this preparation.
