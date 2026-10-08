@@ -72,4 +72,10 @@ Kent approved all six supplied recommendations on October 5, 2026: terminal-stat
 - Complete permission, workflow, concurrency, email, reporting and restoration verification.
 - Obtain explicit live-launch authorization.
 
+October 8: Kent approved Resend as the email provider. Setup is next; sender, reply-to and development recipient allowlist remain undecided. For now Kent requested only a disabled Send SO Email placeholder beside employee assignment.
+
 These unresolved details are not reasons to revisit already confirmed requirements. Record later decisions here and update requirements/screens consistently.
+
+October 8 email-format/NTE correction: Kent confirmed NTE should be a numeric field without mandatory two-decimal formatting. Use compact consecutive label/value lines in SO emails, matching the provided current-email reference and targeting US Letter printing. Preserve blanks/all item rows; long content may overflow rather than being truncated. No NTE calculation or cap-enforcement rule is inferred.
+
+October 8 Resend setup update: Kent supplied RESEND_API_KEY locally and confirmed his Resend account email as kent@cartsandparts.com. Development uses onboarding@resend.dev and a server-enforced exact recipient allowlist for that address. Other assignees are rejected rather than redirected. The disabled placeholder is superseded by functional development sending. Company-domain sender, reply-to and signed delivery callbacks remain unresolved before broader pilot/live delivery. Durable retries reuse the immutable email and provider idempotency key within a conservative 23-hour window; older uncertain attempts require provider review.

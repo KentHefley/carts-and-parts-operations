@@ -85,3 +85,23 @@ Refresh the landing page and verify only View Dashboard Activity appears. Type c
 
 Automated/isolated results: order regression passed; lint/build passed; actual UI component fixture in Chromium verified light/dark appearance, collapse, mobile Menu/Escape/focus return, 390px page width without overflow, and delayed autosave/navigation protection. The fixture used synthetic data and stubs for authentication, notifications and persistence; live signed-in visual/persistence checks remain pending.
 Connected isolated-browser runtime diagnostics returned no configuration or session errors. This covered the sign-in redirect; signed-in application review is still pending.
+
+## Order controls — October 8
+
+Refresh the order as creator/admin: Send SO Email should appear beside Add employee, disabled, with Email setup pending. An ordinary user who did not create the order should not see the send control. Switch Details → Activity → Details; tabs and header should remain in the same place, with the active view highlighted. Scroll to confirm the bar stays visible. Pending edits should still block navigation until Saved.
+
+Isolated Chromium component check passed disabled placeholder and identical tab bounds/active labels on both views; actual authenticated permission visibility and sticky behavior remain employee checks. No delivery tested or attempted; Resend setup is next.
+# October 8 — Resend development email
+
+`npm run test:email` runs template/allowlist tests and guarded synthetic database checks with mocked transport; it sends no real email. Covers escaping, blanks/extra item rows, price exclusion, creator/admin permission, inactive admin rejection, stale snapshots, concurrent duplicate queue/send requests, timeout/retry, immutable content, accepted-message deduplication and expired retry refusal. Fixture cleanup removes only its generated records and notifications.
+
+One explicitly invoked real synthetic send was accepted by Resend: DEV-000069 to kent@cartsandparts.com. The order and email audit are retained for review. Provider acceptance does not prove inbox delivery. Check inbox/spam and review formatting before wider use.
+
+Isolated browser component checks used real OrderForm/EmailToast with mock actions, without bypassing app authentication: save precedes send; saved edited value appears in snapshot; failure shows Retry SO Email and no confetti; retry success shows toast; reduced motion hides confetti; dark theme uses the correct colors. Authenticated Chrome button-to-server test remains Kent's manual check. Next.js runtime probe reported no compilation/config/session errors on the sign-in redirect. Production build and lint passed (one pre-existing skill-template lint warning). Existing order regression checks passed.
+
+Employee check: refresh localhost, open the synthetic order (or another synthetic order you created), assign only Kent, edit a field, click Send SO Email, verify Saved followed by acceptance toast/confetti and correct email content. Try an additional test assignee: sending must reject the non-allowlisted address. Assignment alone must never send email.
+# October 8 — NTE and compact email correction
+
+NTE browser checks: input type number with step=any accepts 94 and 94.567 without trailing-zero formatting. Synthetic database order checks exercise 94, 94.5, 94.567 and blank persistence and reject nonnumeric text. Template escaping/selection tests retain all labels and item rows and exclude prices. Compact email preview printed to one US Letter page (612×792 points), with a simulated email print header; visually checked for readability and clipping. Long notes/additional rows remain allowed to overflow.
+
+Verification completed: order regression checks (including NTE), email-template tests, lint and production build passed. One existing skill-template lint warning remains. Restarted Next.js reported no compilation/config/session errors on the authenticated-route sign-in redirect. Localhost is running; actual email-client printing remains Kent's manual check.

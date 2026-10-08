@@ -31,9 +31,15 @@ async function main() {
     assert.equal(order.items.length, 4);
     assert.equal(order.items[3].unitPrice, "12.34");
     assert.match(order.fields.dateEntered, /^\d{4}-\d{2}-\d{2}$/);
+    for (const nte of ["94", "94.5", "94.567", ""]) {
+      const nteSaved = await saveOrder(database, first.id, { id: order.id, base: order.fields, patch: { text_12__1: nte } });
+      assert.equal(nteSaved.ok, true);
+      order = await loadOrder(database, order.id);
+      assert.equal(order.fields.text_12__1, nte);
+    }
     const original = order;
     const originalEvents = await database.orderEvent.count({ where: { orderId: order.id } });
-    const invalidPatches: Record<string, string>[] = [{ dateEntered: "2026-02-30" }, { dateEntered: "2026-99-99" }, { status: "Complete" }, { unknownField: "value" }];
+    const invalidPatches: Record<string, string>[] = [{ dateEntered: "2026-02-30" }, { dateEntered: "2026-99-99" }, { status: "Complete" }, { unknownField: "value" }, { text_12__1: "not a number" }];
     for (const patch of invalidPatches) {
       const rejected = await saveOrder(database, first.id, { id: order.id, base: order.fields, patch });
       assert.equal(rejected.ok, false);
@@ -56,7 +62,7 @@ async function main() {
     const retriedSave = await saveOrder(database, second.id, { id: order.id, base: original.fields, patch: { text_13__1: "Synthetic customer" } });
     assert.equal(retriedSave.ok, true);
     const auditCount = await database.orderEvent.count({ where: { orderId: order.id } });
-    assert.equal(auditCount, 4); // Reservation + first save + two independent field edits.
+    assert.equal(auditCount, originalEvents + 2); // Only the two independent field edits add events after the baseline.
     const changedItems = await saveOrder(database, first.id, { id: order.id, base: reopened.fields, patch: {}, baseItems: reopened.items, items: reopened.items.map((item, index) => index === 0 ? { ...item, description: "Changed" } : item) });
     assert.equal(changedItems.ok, true);
     const itemConflict = await saveOrder(database, second.id, { id: order.id, base: reopened.fields, patch: {}, baseItems: reopened.items, items: reopened.items.map((item, index) => index === 0 ? { ...item, description: "Competing" } : item) });

@@ -75,3 +75,24 @@ New sidebar/topbar navigation honors unsaved-order protection. Existing three-se
 
 Checks: synthetic development order regression passed; lint passed with existing skill-template warning; production build passed. Actual components in an isolated Chromium fixture were inspected in light/dark desktop and 390px mobile views. Theme switching, collapsed navigation, mobile Menu/Escape/focus return and zero page-width overflow passed. A synthetic form edit blocked navigation with zero save calls, then saved once after three seconds. Stubbed auth/notifications/database in the fixture; authenticated full-app theme persistence and employee review still required. Fixture files were removed. Dark In Progress amber was slightly deepened to improve white-text contrast.
 Final styling build passed; server restarted at localhost:3000. Next.js compilation diagnostics found no issues. Unauthenticated /sales-orders access redirects to sign-in. Full signed-in employee visual and theme-preference persistence checks remain pending.
+
+## October 8 — Send SO Email placeholder and stable order navigation
+
+Kent selected Resend but requested setup next and only a placeholder now. Added disabled Send SO Email beside Add employee for the original creator/admin, with Email setup pending. No email delivery, API credentials, provider dependency or database change.
+
+Order Details and Activity Log now share a sticky navigation component on both routed views. Both views retain the same order header and left tab position; the selected tab is highlighted. Activity for completed orders now preserves the Completed Sales Orders sidebar/return target. Unsaved navigation protection remains.
+
+Lint passed with existing skill-template warning. Isolated Chromium checked the real OrderForm/OrderTabs components with synthetic values: Send SO Email disabled with explanatory text; tab bounds identical in both views (x=28, y=118.3, width=214.9, height=42); Details → Activity → Details returned correctly. Fixture data/auth/persistence were isolated and files removed. Live employee review remains pending.
+Production build passed; local server restarted. Runtime compilation diagnostics found no issues and isolated sign-in session returned no config/session errors. Authenticated order review remains pending.
+# October 8 — Development Resend integration
+
+Implemented functional Send SO Email beside assignment, fixed selected-field HTML/plain-text template, save-before-snapshot behavior, creator/admin server permissions, development recipient restrictions and durable OrderEmail records with stable-key retries. Additive migration applied only to the verified Development Neon project. Pending attempts survive page reload; accepted messages are never resent by retry. Email snapshot stays independent of later edits. No attachment bytes or price fields are included.
+
+Success toast/confetti honors reduced motion and light/dark themes. Synthetic DEV-000069 was accepted by Resend for Kent; inbox confirmation and authenticated Chrome click test remain. Template/policy/database email checks, existing order checks, lint and production build passed; isolated component browser tests checked save/send order, failure/retry, confetti and reduced motion. No commits, push or deployment performed.
+
+Next email work before broader pilot: verify company domain/sender and reply-to, configure signed delivery/bounce callbacks, define handling of older uncertain attempts after provider review, test real employee recipients in the appropriate environment. Current transport fails closed outside the verified development environment. See email-milestone.md for scope and retry policy.
+# October 8 — Compact SO email and numeric NTE
+
+Kent verified email sending and requested numeric NTE entry without fixed two-decimal formatting plus a compact printable email. NTE now uses the existing number input with step=any; whole numbers, decimals and blanks preserve their entered values. Numeric validation applies on the server; no cap/calculation rule is added. Historical Monday text-column mapping remains documented.
+
+Email HTML now uses consecutive inline label/value lines at readable 14px size with no per-field padding, matching the supplied email reference. Fixed field selection, blanks and all item rows are preserved. Synthetic three-item print preview verified as one 612×792-point US Letter page; long content may overflow without truncation. Preview: output/pdf/compact-order-email-preview.pdf. Future emails use the new formatting; existing queued snapshots retain their original layout for safe retries.

@@ -27,7 +27,7 @@ The Field column is a planning mapping, not a final storage key. Existing labels
 | Job Type | E/P | Yes | Service opens Service and Labor section. Full choice list not verified. |
 | Priority | E | Yes | Label verified; complete choices/control not verified. |
 | Terms | E/P | Yes | Admin-managed choices; full values not verified. |
-| NTE | E; Kent clarification | Yes | Not to Exceed. Calculation, units, validation, and enforcement remain undefined. |
+| NTE | E; Kent clarification | Yes | Not to Exceed. October 8: number input; whole numbers or decimals accepted without fixed two-decimal formatting. Calculation, units and enforcement remain undefined. Source Monday text column is retained in the mapping. |
 | Price Level | E/P | Yes | Full dropdown values and relation to price books need verification; do not infer pricing automation. |
 | Freight | E | Yes | Meaning, type, and calculation remain undefined. A sample value does not establish the available choices. |
 | Miles | E, blank | Yes | Meaning, precision, units/rate application, and input type need verification. |

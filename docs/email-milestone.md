@@ -1,0 +1,7 @@
+# Development SO email milestone
+
+Resend is approved. Kent added the API key locally and confirmed the Resend account email as kent@cartsandparts.com. Until company DNS is available, use onboarding@resend.dev and permit only that recipient. Other assignees are rejected, never redirected. Company sender/reply-to and delivery callbacks remain launch work.
+
+Acceptance: creator/admin sends only after pending changes save; capture the fixed selected fields and all item rows, preserving blanks and excluding prices/files. Store an immutable snapshot and recipient list before awaiting Resend. Persist each attempt and provider acceptance separately from inbox delivery. Retry the same message with the same provider idempotency key, within 23 hours of its first attempt (Resend retains keys 24 hours); block older uncertain retries for manual review. Accepted messages cannot be resent through retry. Recheck permissions and the development allowlist on every retry. No unawaited background work.
+
+Checks: template escaping/selection; unauthorized and inactive actors; unexpected recipients; concurrent repeated requests; failed request/retry; immutable snapshot; real synthetic email to Kent; lint, build and runtime UI. Success toast/confetti follows acceptance only and respects reduced motion. Development sends to all current assignees in one provider request; recipient details never come from the browser.

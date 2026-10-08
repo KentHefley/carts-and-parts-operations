@@ -97,7 +97,11 @@ Restoration retains the order's previous status and assignments. Flag assigned u
 
 Only creator/admin can click Send SO Email. Send immediately without preview/confirmation to every current assignee. Disable if no recipients. Wait for pending autosaves before capturing sent values. Record sender, time, recipients, send outcome; distinguish provider acceptance from delivery and safely retry failures without duplicating successful sends. Show acceptance/success toast or failure/partial-failure feedback.
 
+Kent requested a brief confetti effect with the success toast. Celebrate only confirmed provider acceptance, never an attempted or failed request; honor reduced-motion preferences. During initial Resend testing, development delivery is restricted to kent@cartsandparts.com. A retry sends the original saved snapshot/recipients and rechecks actor approval, recipient approval and allowlist; it does not silently capture newer form changes.
+
 Use an explicit field selection; adding form fields must not expand email content automatically. Preserve blank labels and all item rows, including additional/unused rows. Do not attach uploaded files or include item/labor/travel prices.
+
+October 8: NTE is a number input accepting whole numbers or decimals, without requiring two decimal places or adding trailing zeros. Its business calculation/enforcement remains undefined. Email uses compact, consecutive label/value lines without per-field padding, based on the supplied current order-email PDF. Aim for one US Letter page for ordinary three-item orders; preserve content and allow overflow for long notes or additional items rather than truncating or shrinking it excessively.
 
 Subject: SALES ORDER: [SO number].
 Body fields, in current grouping:
@@ -152,3 +156,5 @@ Collect employee first and last names during invited signup and display their co
 October 8: Submitted By displays the original creator's employee name (email fallback only when no name is available); editing by another employee does not change creator identity. Approved users can read dashboard activity across saved orders and separate history for each order. Both are read-only views of the same audit records.
 
 October 8 refinement: dashboard activity is behind a View All Activity link in the top navigation; it is not displayed on login. Autosave waits for a three-second pause in changes. Moving between fields does not force a save; Save now stays immediate. Related consecutive ordinary edits by one actor to one order within one minute display as a summary from original to final values. Status and assignment events stay distinct; immutable audit records are retained.
+
+October 8: Resend is now the chosen email provider; configuration and end-to-end delivery are next. Until setup, show creator/admin a disabled Send SO Email placeholder beside employee assignment with Email setup pending. Preserve the selected-field, recipient and permission rules above.
