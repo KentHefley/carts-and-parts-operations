@@ -73,7 +73,7 @@ export const orderFields: FieldDefinition[] = [
     "key": "text_12__1",
     "label": "NTE",
     "section": "Items and Pricing",
-    "type": "number"
+    "type": "text"
   },
   {
     "key": "dup__of_priority__1",

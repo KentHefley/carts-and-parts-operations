@@ -2,7 +2,7 @@ import { Prisma, PrismaClient } from "../generated/prisma/client";
 import { fieldKeys, orderFields } from "./order-fields";
 import { chicagoDate, conflicts, ItemValue, OrderView, SaveRequest } from "./order-types";
 import { notifyOrderChange } from "./notification-store";
-import { orderStatuses, protectedStatusFields, terminalStatus } from "./order-status";
+import { missingCloseout, orderStatuses, protectedStatusFields, terminalStatus } from "./order-status";
 
 const include = { items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true, displayName: true } }, assignments: { orderBy: { userId: "asc" as const } } };
 type StoredOrder = Prisma.SalesOrderGetPayload<{ include: typeof include }>;
@@ -56,10 +56,11 @@ function validateFields(fields: Record<string, string>) {
   }
 }
 
-export async function saveOrder(database: PrismaClient, actorId: string, request: SaveRequest): Promise<{ ok: true; order: OrderView } | { ok: false; message: string; conflict?: string[] }> {
+export async function saveOrder(database: PrismaClient, actorId: string, request: SaveRequest): Promise<{ ok: true; order: OrderView } | { ok: false; message: string; conflict?: string[]; closeoutRequired?: boolean }> {
   if (!request || typeof request.id !== "string" || !request.patch || !request.base) throw new Error("Invalid save request.");
   try {
     validateFields(request.patch);
+    if (request.closeoutMode !== undefined && (request.closeoutMode !== "quick" || !terminalStatus(request.patch.status))) throw new InputError("Quick close requires Complete or Voided status.");
     if (request.items) validateItems(request.items);
     if (request.baseItems) validateItems(request.baseItems);
     for (const ids of [request.assigneeIds, request.baseAssigneeIds]) if (ids !== undefined && (!Array.isArray(ids) || ids.some(id => typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) || new Set(ids).size !== ids.length)) throw new InputError("Assignments must contain each user only once.");
@@ -72,7 +73,19 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
     await transaction.$queryRaw`SELECT id FROM "SalesOrder" WHERE id = ${request.id}::uuid FOR UPDATE`;
     const order = await transaction.salesOrder.findUniqueOrThrow({ where: { id: request.id }, include });
     const current = orderView(order);
-    const conflictingFields = conflicts(current.fields, request.base, request.patch);
+    const patch = { ...request.patch };
+    if (request.closeoutMode === "quick") {
+      if (current.fields.status === patch.status) {
+        // A repeated quick-close request must retain the original recorded closeout.
+        patch.text_79__1 = current.fields.text_79__1 ?? "";
+        patch.closed_out_date4__1 = current.fields.closed_out_date4__1 ?? "";
+      } else {
+        const actor = await transaction.appUser.findUniqueOrThrow({ where: { id: actorId }, select: { email: true, displayName: true } });
+        patch.text_79__1 = actor.displayName || actor.email;
+        patch.closed_out_date4__1 = chicagoDate();
+      }
+    }
+    const conflictingFields = conflicts(current.fields, request.base, patch);
     const assigneeIds = request.assigneeIds ? [...request.assigneeIds].sort() : current.assigneeIds;
     const assignmentChanged = JSON.stringify(assigneeIds) !== JSON.stringify(current.assigneeIds);
     if (request.assigneeIds && assignmentChanged && JSON.stringify(current.assigneeIds) !== JSON.stringify([...(request.baseAssigneeIds ?? [])].sort())) conflictingFields.push("Assigned To");
@@ -81,11 +94,11 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
     const addedIds = assigneeIds.filter(id => !current.assigneeIds.includes(id));
     const activeAdded = await transaction.appUser.count({ where: { id: { in: addedIds }, active: true } });
     if (activeAdded !== addedIds.length) return { ok: false as const, message: "Only active approved users can be newly assigned." };
-    const next = { ...current.fields, ...request.patch };
+    const next = { ...current.fields, ...patch };
     if (!next.name?.trim()) return { ok: false as const, message: "Name is required before saving." };
     if (!next.dateEntered) next.dateEntered = chicagoDate();
-    if (terminalStatus(next.status) && (!next.text_79__1?.trim() || !next.closed_out_date4__1)) {
-      return { ok: false as const, message: "Closed Out By and Closed Out Date are required for Complete or Voided." };
+    if (terminalStatus(next.status) && missingCloseout(next)) {
+      return { ok: false as const, closeoutRequired: true, message: "Closed Out By and Closed Out Date are required for Complete or Voided." };
     }
     if (next.status !== current.fields.status) {
       const actor = await transaction.appUser.findUniqueOrThrow({ where: { id: actorId }, select: { email: true, displayName: true } });

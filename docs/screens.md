@@ -42,7 +42,9 @@ Assigned To shows selected employees with individual remove actions and a dropdo
 
 New Order immediately generates and displays a unique SO Number in the read-only field, before Name entry. The working app allocates it from the company-wide sequence server-side; the wireframe uses an isolated DEMO sequence.
 
-Completion: Closed Out By and Closed Out Date are required when marking Complete or Voided; ordinary draft saving still needs only Name. Put Mark Complete and Mark Voided at the bottom, underneath the fields. Both actions route the record into Completed Sales Orders. Omit the Legacy Voided checkbox.
+Completion: the bottom Mark Complete and Mark Voided buttons require entered Closed Out By and Closed Out Date; ordinary draft saving still needs only Name. Put these buttons underneath the fields. Status → Complete/Voided is a quick close that supplies the signed-in employee and today's closeout date automatically. Both paths route the record into Completed Sales Orders. Omit the Legacy Voided checkbox.
+
+Latest October 8 closeout clarification: keep Closed Out By editable and clearly separate closeout inputs from automatic completion/void records. The bottom buttons validate entered name/date and show a dismissible warning with an X beside these inputs when missing. The Status menu instead supplies the employee name and today's date and closes promptly. Explain the distinction beside the controls. Missing-closeout validation must not appear as a global save-conflict banner or lock editing. NTE remains a text field.
 
 Use plain field labels in Service and Labor: Labor Price, Travel Price, AM Description, Freight and Hours Worked. Do not append implementation annotations such as manual, text or calculated. Document input types and calculation behavior separately; Hours Worked remains read-only and calculated.
 

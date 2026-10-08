@@ -1,6 +1,6 @@
 export type ItemValue = { description: string; quantity: string; unitPrice: string };
 export type OrderView = { id: string; number: string; creator: string; fields: Record<string, string>; items: ItemValue[]; assigneeIds: string[] };
-export type SaveRequest = { id: string; base: Record<string, string>; patch: Record<string, string>; baseItems?: ItemValue[]; items?: ItemValue[]; assigneeIds?: string[]; baseAssigneeIds?: string[] };
+export type SaveRequest = { id: string; base: Record<string, string>; patch: Record<string, string>; baseItems?: ItemValue[]; items?: ItemValue[]; assigneeIds?: string[]; baseAssigneeIds?: string[]; closeoutMode?: "quick" };
 export type AssignableUser = { id: string; email: string; displayName: string | null; active: boolean };
 
 export function chicagoDate() {

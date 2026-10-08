@@ -4,13 +4,20 @@ import Link from "next/link";
 import { orderFields } from "../../lib/order-fields";
 import { AssignableUser, ItemValue, OrderView } from "../../lib/order-types";
 import { persistOrder } from "./actions";
-import { orderStatuses, terminalStatus } from "../../lib/order-status";
+import { missingCloseout, orderStatuses, terminalStatus } from "../../lib/order-status";
 import { DateField } from "./date-field";
 import { OrderTabs } from "./order-tabs";
 import { sendSOEmail } from "./email-actions";
 import { EmailToast } from "./email-toast";
 
 const sections = ["Order Overview", "Billing and Store Information", "Items and Pricing", "Additional Information", "Completion", "Service and Labor"];
+function revealCloseout(fields: Record<string, string>) {
+  const section = document.getElementById("completion-section");
+  section?.setAttribute("open", "");
+  section?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  const input = fields.text_79__1?.trim() ? section?.querySelector<HTMLButtonElement>(".date-field") : document.getElementById("closed-out-by");
+  input?.focus({ preventScroll: true });
+}
 export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId }: { initial: OrderView; users: AssignableUser[]; canSendEmail?: boolean; pendingEmailId?: string }) {
   const [fields, setFields] = useState(initial.fields);
   const [items, setItems] = useState(initial.items);
@@ -19,6 +26,7 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
   const [conflict, setConflict] = useState(false);
   const [busy, setBusy] = useState(false);
   const [baseline, setBaseline] = useState(initial);
+  const [closeoutError, setCloseoutError] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailId, setEmailId] = useState(pendingEmailId);
   const [toast, setToast] = useState<{ message: string; success: boolean } | null>(null);
@@ -28,11 +36,13 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
   const latest = useRef({ fields, items, assigneeIds });
   const saving = useRef(false);
   const blocked = useRef(false);
+  const quickClose = useRef<string | null>(null);
   const dirty = JSON.stringify(fields) !== JSON.stringify(baseline.fields) || JSON.stringify(items) !== JSON.stringify(baseline.items) || JSON.stringify(assigneeIds) !== JSON.stringify(baseline.assigneeIds);
 
   const save = useCallback(async () => {
     if (saving.current || blocked.current) return false;
     const snapshot = latest.current;
+    const quick = quickClose.current === snapshot.fields.status;
     const patch = Object.fromEntries(Object.entries(snapshot.fields).filter(([key, value]) => value !== (saved.current.fields[key] ?? "")));
     const itemsChanged = JSON.stringify(snapshot.items) !== JSON.stringify(saved.current.items);
     const assignmentsChanged = JSON.stringify(snapshot.assigneeIds) !== JSON.stringify(saved.current.assigneeIds);
@@ -40,11 +50,13 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
     if (!Object.keys(patch).length && !itemsChanged && !assignmentsChanged) return true;
     saving.current = true; setBusy(true); setFeedback("Saving…");
     try {
-      const result = await persistOrder({ id: initial.id, base: saved.current.fields, patch, ...(itemsChanged ? { items: snapshot.items, baseItems: saved.current.items } : {}), ...(assignmentsChanged ? { assigneeIds: snapshot.assigneeIds, baseAssigneeIds: saved.current.assigneeIds } : {}) });
+      const result = await persistOrder({ id: initial.id, base: saved.current.fields, patch, ...(quick ? { closeoutMode: "quick" as const } : {}), ...(itemsChanged ? { items: snapshot.items, baseItems: saved.current.items } : {}), ...(assignmentsChanged ? { assigneeIds: snapshot.assigneeIds, baseAssigneeIds: saved.current.assigneeIds } : {}) });
       if (!result.ok) {
+        if (result.closeoutRequired) { setCloseoutError(true); setFeedback("Unsaved changes"); revealCloseout(snapshot.fields); return false; }
         blocked.current = true; setConflict(true); setFeedback(result.message + (result.conflict ? ` (${result.conflict.map(key => orderFields.find(field => field.key === key)?.label ?? key).join(", ")})` : ""));
         return false;
       } else {
+        if (quick && quickClose.current === snapshot.fields.status) quickClose.current = null;
         saved.current = result.order;
         setBaseline(result.order);
         // Preserve typing that occurred while the request was in flight.
@@ -75,7 +87,8 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
 
   useEffect(() => {
     latest.current = { fields, items, assigneeIds };
-    if (!conflict) { const timer = setTimeout(() => { void save(); }, 3000); return () => clearTimeout(timer); }
+    const quick = quickClose.current === fields.status;
+    if (!conflict && (quick || !(terminalStatus(fields.status) && missingCloseout(fields)))) { const timer = setTimeout(() => { void save(); }, quick ? 0 : 3000); return () => clearTimeout(timer); }
   }, [fields, items, assigneeIds, conflict, save, busy]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (dirty || saving.current) event.preventDefault(); };
@@ -94,15 +107,26 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
     document.addEventListener("click", protectNavigation, true);
     return () => document.removeEventListener("click", protectNavigation, true);
   }, [dirty]);
-  function update(key: string, value: string) { setFields(current => ({ ...current, [key]: value })); if (!conflict) setFeedback("Unsaved changes"); }
+  function update(key: string, value: string) {
+    setFields(current => ({ ...current, [key]: value }));
+    if (["text_79__1", "closed_out_date4__1"].includes(key)) {
+      const next = { ...fields, [key]: value };
+      if (!missingCloseout(next)) setCloseoutError(false);
+      else if (terminalStatus(next.status)) setCloseoutError(true);
+    }
+    if (!conflict) setFeedback("Unsaved changes");
+  }
   function updateItem(index: number, key: keyof ItemValue, value: string) { setItems(current => current.map((item, position) => position === index ? { ...item, [key]: value } : item)); if (!conflict) setFeedback("Unsaved changes"); }
-  function changeStatus(status: string) {
+  function changeStatus(status: string, quick = false) {
     if (busy || conflict) return;
-    if (terminalStatus(status) && (!fields.text_79__1?.trim() || !fields.closed_out_date4__1)) {
-      setFeedback("Fill in Closed Out By and Closed Out Date in Completion before marking Complete or Voided.");
-      document.getElementById("completion-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (status === fields.status) return;
+    if (!quick && terminalStatus(status) && missingCloseout(fields)) {
+      setCloseoutError(true);
+      revealCloseout(fields);
       return;
     }
+    quickClose.current = quick && terminalStatus(status) ? status : null;
+    setCloseoutError(false);
     update("status", status);
   }
 
@@ -128,9 +152,13 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
           <label>SO Number<input value={initial.number} readOnly /></label>
           <label>Date Entered<DateField label="Date Entered" value={fields.dateEntered ?? ""} onChange={value => update("dateEntered", value)} /></label>
           <label>Submitted By<input value={initial.creator} readOnly /></label>
-          <div><span>Status</span><details className="status-picker"><summary className={`status-box status-${fields.status?.replaceAll(" ", "-")}`}>{fields.status}</summary>{orderStatuses.map(status => <button type="button" disabled={busy || conflict} key={status} onClick={event => { changeStatus(status); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{status}</button>)}</details></div>
+          <div><span>Status</span><details className="status-picker"><summary className={`status-box status-${fields.status?.replaceAll(" ", "-")}`}>{fields.status}</summary>{orderStatuses.map(status => <button type="button" disabled={busy || conflict} key={status} onClick={event => { changeStatus(status, true); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{status}</button>)}</details><small className="status-help">Complete or Voided here records your name and today’s closeout date.</small></div>
         </>}
-        {orderFields.filter(field => field.section === section).map(field => <label key={field.key}>{field.label}
+        {section === "Completion" && <>
+          <label htmlFor="closed-out-by">Closed Out By<input id="closed-out-by" type="text" value={fields.text_79__1 ?? ""} aria-invalid={closeoutError && !fields.text_79__1?.trim() || undefined} aria-describedby={closeoutError ? "closeout-warning" : "closeout-help"} onChange={event => update("text_79__1", event.target.value)} /></label>
+          <label>Closed Out Date<DateField label="Closed Out Date" value={fields.closed_out_date4__1 ?? ""} invalid={closeoutError && !fields.closed_out_date4__1} describedBy={closeoutError ? "closeout-warning" : "closeout-help"} onChange={value => update("closed_out_date4__1", value)} /></label>
+        </>}
+        {orderFields.filter(field => field.section === section && !["text_79__1", "closed_out_date4__1"].includes(field.key)).map(field => <label key={field.key}>{field.label}
           {field.options ? <select value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)}><option value="">—</option>{field.options.map(option => <option key={option}>{option}</option>)}</select>
             : field.type === "date" ? <DateField label={field.label} value={fields[field.key] ?? ""} onChange={value => update(field.key, value)} />
             : field.type === "textarea" ? <textarea value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />
@@ -138,8 +166,10 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
         </label>)}
       </div>
       {section === "Completion" && <>
-        <p>Closed Out By and Closed Out Date are required when marking Complete or Voided.</p>
-        <div className="field-grid">{[["completedBy", "Completed By"], ["completionDate", "Completion Date (UTC)"], ["voidedBy", "Voided By"], ["voidedDate", "Voided Date (UTC)"]].map(([key, label]) => <label key={key}>{label}<input value={fields[key] ?? ""} readOnly /></label>)}</div>
+        <p id="closeout-help">For the buttons below, enter the person responsible for closeout and choose the closeout date. The Status menu closes the order using your name and today’s date. Notes and any void reason remain available here.</p>
+        {closeoutError && <div className="closeout-warning" id="closeout-warning" role="alert"><p>Fill in Closed Out By and Closed Out Date before marking Complete or Voided.</p><button type="button" aria-label="Dismiss closeout warning" onClick={() => { setCloseoutError(false); document.getElementById("closed-out-by")?.focus(); }}>×</button></div>}
+        <details className="automatic-closeout"><summary>Automatic completion and void records</summary><p>These record who changed the status and when. Enter closeout details in the editable fields above.</p>
+        <div className="field-grid">{[["completedBy", "Completed By"], ["completionDate", "Completion Date (UTC)"], ["voidedBy", "Voided By"], ["voidedDate", "Voided Date (UTC)"]].map(([key, label]) => <label key={key}>{label}<input value={fields[key] ?? ""} readOnly /></label>)}</div></details>
         <div className="closeout-actions"><button type="button" disabled={busy || conflict || fields.status === "Complete"} onClick={() => changeStatus("Complete")}>Mark Complete</button><button type="button" disabled={busy || conflict || fields.status === "Voided"} onClick={() => changeStatus("Voided")}>Mark Voided</button></div>
       </>}
       {section === "Additional Information" && <div className="assignment-picker"><h3>Assigned To</h3><ul>{assigneeIds.map(id => { const user = users.find(user => user.id === id); return <li key={id}>{user?.displayName || user?.email || "Unavailable user"}{user && !user.active ? " (inactive)" : ""} <button type="button" aria-label={`Remove ${user?.displayName || user?.email || "user"}`} onClick={() => { setAssigneeIds(current => current.filter(value => value !== id)); if (!conflict) setFeedback("Unsaved changes"); }}>Remove</button></li>; })}</ul><div className="assignment-actions"><label>Add employee<select value="" onChange={event => { if (event.target.value) { setAssigneeIds(current => [...new Set([...current, event.target.value])].sort()); if (!conflict) setFeedback("Unsaved changes"); } }}><option value="">Choose an employee</option>{users.filter(user => user.active && !assigneeIds.includes(user.id)).map(user => <option key={user.id} value={user.id}>{user.displayName || user.email}</option>)}</select></label>{canSendEmail && <div className="email-placeholder"><button className="primary-button" type="button" disabled={busy || conflict || emailBusy || (!emailId && !assigneeIds.length)} onClick={() => void sendEmail()} aria-describedby="email-test-notice">{emailBusy ? "Sending…" : emailId ? "Retry SO Email" : "Send SO Email"}</button><small id="email-test-notice">{emailId ? "Retry sends the original saved email snapshot." : "Development: assigned recipients must be kent@cartsandparts.com."}</small></div>}</div></div>}

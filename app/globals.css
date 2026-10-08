@@ -237,6 +237,13 @@ tbody tr:hover { background:var(--soft); }
 .email-placeholder small { font-size:11px; color:var(--muted); }
 @media(max-width:640px) { .assignment-actions { flex-direction:column; } .assignment-actions>label { width:100%; } .email-placeholder { padding-top:0; } .order-tabs a,.order-tabs button { padding:9px 10px; } }
 .email-form-lock { border: 0; padding: 0; margin: 0; min-width: 0; }
+.closeout-warning { display:flex; align-items:flex-start; gap:12px; margin:12px 0; padding:12px; border:2px solid var(--orange); border-radius:8px; background:var(--paper); }
+.closeout-warning p { margin:0; flex:1; }
+.closeout-warning button { flex:none; padding:0 8px; font-size:22px; line-height:24px; }
+.automatic-closeout { margin:16px 0; }
+.automatic-closeout>summary { cursor:pointer; color:var(--muted); }
+.status-help { display:block; margin-top:6px; color:var(--muted); font-size:12px; }
+[aria-invalid="true"],[data-invalid="true"] { border-color:#c74425; }
 .email-toast { position: fixed; right: 24px; bottom: 24px; z-index: 100; max-width: min(480px, calc(100vw - 48px)); display: flex; gap: 12px; align-items: start; padding: 16px 20px; border: 2px solid var(--blue); background: var(--paper, white); color: var(--foreground); border-radius: 12px; box-shadow: 0 8px 32px #0003; }
 .email-toast p { margin: 0; }
 .email-toast button { border: 0; padding: 0 6px; font-size: 24px; }

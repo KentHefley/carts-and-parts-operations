@@ -4,6 +4,7 @@ import { developmentCredentials } from "./development-target";
 import { createDatabaseClient } from "../lib/database-client";
 import { listOrders, loadOrder, reserveOrder, saveOrder } from "../lib/order-store";
 import { readActivity } from "../lib/activity-store";
+import { chicagoDate } from "../lib/order-types";
 
 async function main() {
   const { databaseUrl } = developmentCredentials();
@@ -31,7 +32,7 @@ async function main() {
     assert.equal(order.items.length, 4);
     assert.equal(order.items[3].unitPrice, "12.34");
     assert.match(order.fields.dateEntered, /^\d{4}-\d{2}-\d{2}$/);
-    for (const nte of ["94", "94.5", "94.567", ""]) {
+    for (const nte of ["94", "94.5", "Not to exceed $94", ""]) {
       const nteSaved = await saveOrder(database, first.id, { id: order.id, base: order.fields, patch: { text_12__1: nte } });
       assert.equal(nteSaved.ok, true);
       order = await loadOrder(database, order.id);
@@ -39,7 +40,7 @@ async function main() {
     }
     const original = order;
     const originalEvents = await database.orderEvent.count({ where: { orderId: order.id } });
-    const invalidPatches: Record<string, string>[] = [{ dateEntered: "2026-02-30" }, { dateEntered: "2026-99-99" }, { status: "Complete" }, { unknownField: "value" }, { text_12__1: "not a number" }];
+    const invalidPatches: Record<string, string>[] = [{ dateEntered: "2026-02-30" }, { dateEntered: "2026-99-99" }, { status: "Complete" }, { unknownField: "value" }];
     for (const patch of invalidPatches) {
       const rejected = await saveOrder(database, first.id, { id: order.id, base: order.fields, patch });
       assert.equal(rejected.ok, false);
@@ -96,13 +97,17 @@ async function main() {
     const beforeClose = await loadOrder(database, order.id);
     const invalidCloseouts: Record<string, string>[] = [{ status: "Complete", text_79__1: "  ", closed_out_date4__1: "2026-10-08" }, { status: "Voided", text_79__1: "Tester", closed_out_date4__1: "" }, { completedBy: "Spoofed actor" }, { completionDate: "2026-10-08" }];
     for (const patch of invalidCloseouts) {
-      assert.equal((await saveOrder(database, first.id, { id: order.id, base: beforeClose.fields, patch })).ok, false);
+      const rejected = await saveOrder(database, first.id, { id: order.id, base: beforeClose.fields, patch });
+      assert.equal(rejected.ok, false);
+      if (!rejected.ok && patch.status) assert.equal(rejected.closeoutRequired, true);
     }
     assert.deepEqual(await loadOrder(database, order.id), beforeClose);
     const completed = await saveOrder(database, second.id, { id: order.id, base: beforeClose.fields, patch: { status: "Complete", text_79__1: "Manual closeout person", closed_out_date4__1: "2026-10-08" } });
     assert.equal(completed.ok, true);
     if (!completed.ok) throw new Error("Completion failed");
     assert.equal(completed.order.fields.completedBy, second.email);
+    assert.equal(completed.order.fields.text_79__1, "Manual closeout person");
+    assert.equal(completed.order.fields.closed_out_date4__1, "2026-10-08");
     assert.match(completed.order.fields.completionDate, /Z$/);
     assert.equal(completed.order.fields.voidedBy, "");
     assert.deepEqual(completed.order.items, beforeClose.items);
@@ -152,6 +157,25 @@ async function main() {
     assert.equal((await loadOrder(database, order.id)).creator, "Synthetic Creator");
     const other = await saveOrder(database, second.id, { id: distinct[0].id, base: distinct[0].fields, patch: { name: "Synthetic second order" } });
     assert.equal(other.ok, true);
+    const quickDraft = await reserveOrder(database, first.id, randomUUID());
+    const quickSaved = await saveOrder(database, first.id, { id: quickDraft.id, base: quickDraft.fields, patch: { name: "Synthetic quick close", additional_info__1: "Keep these notes" } });
+    assert.equal(quickSaved.ok, true); if (!quickSaved.ok) throw new Error("Quick-close fixture failed");
+    const quickRequest = { id: quickDraft.id, base: quickSaved.order.fields, patch: { status: "Complete", text_79__1: "Untrusted browser actor", closed_out_date4__1: "2000-01-01" }, closeoutMode: "quick" as const };
+    const quickComplete = await saveOrder(database, first.id, quickRequest);
+    assert.equal(quickComplete.ok, true); if (!quickComplete.ok) throw new Error("Quick completion failed");
+    assert.equal(quickComplete.order.fields.text_79__1, "Synthetic Creator");
+    assert.equal(quickComplete.order.fields.closed_out_date4__1, chicagoDate());
+    assert.equal(quickComplete.order.fields.additional_info__1, "Keep these notes");
+    const quickEvents = await database.orderEvent.count({ where: { orderId: quickDraft.id } });
+    assert.equal((await saveOrder(database, first.id, quickRequest)).ok, true);
+    assert.equal(await database.orderEvent.count({ where: { orderId: quickDraft.id } }), quickEvents);
+    const quickVoid = await saveOrder(database, second.id, { id: quickDraft.id, base: quickComplete.order.fields, patch: { status: "Voided", voidReason: "Entered void reason" }, closeoutMode: "quick" });
+    assert.equal(quickVoid.ok, true); if (!quickVoid.ok) throw new Error("Quick void failed");
+    assert.equal(quickVoid.order.fields.text_79__1, second.email);
+    assert.equal(quickVoid.order.fields.closed_out_date4__1, chicagoDate());
+    assert.equal(quickVoid.order.fields.voidReason, "Entered void reason");
+    assert.equal(quickVoid.order.fields.additional_info__1, "Keep these notes");
+    assert.equal((await saveOrder(database, first.id, { id: quickDraft.id, base: quickVoid.order.fields, patch: { status: "In Progress" }, closeoutMode: "quick" })).ok, false);
     const scoped = await readActivity(database, { orderId: order.id });
     assert.ok(scoped.events.length > 0);
     assert.ok(scoped.events.every(event => event.orderId === order.id));
