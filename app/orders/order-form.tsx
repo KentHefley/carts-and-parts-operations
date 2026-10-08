@@ -4,6 +4,8 @@ import Link from "next/link";
 import { orderFields } from "../../lib/order-fields";
 import { AssignableUser, ItemValue, OrderView } from "../../lib/order-types";
 import { persistOrder } from "./actions";
+import { orderStatuses, terminalStatus } from "../../lib/order-status";
+import { DateField } from "./date-field";
 
 const sections = ["Order Overview", "Billing and Store Information", "Items and Pricing", "Additional Information", "Completion", "Service and Labor"];
 export function OrderForm({ initial, users }: { initial: OrderView; users: AssignableUser[] }) {
@@ -48,7 +50,7 @@ export function OrderForm({ initial, users }: { initial: OrderView; users: Assig
 
   useEffect(() => {
     latest.current = { fields, items, assigneeIds };
-    if (!conflict) { const timer = setTimeout(() => { void save(); }, 700); return () => clearTimeout(timer); }
+    if (!conflict) { const timer = setTimeout(() => { void save(); }, 3000); return () => clearTimeout(timer); }
   }, [fields, items, assigneeIds, conflict, save, busy]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (dirty || saving.current) event.preventDefault(); };
@@ -56,30 +58,63 @@ export function OrderForm({ initial, users }: { initial: OrderView; users: Assig
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
+  useEffect(() => {
+    const protectNavigation = (event: MouseEvent) => {
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (link && !link.getAttribute("href")?.startsWith("#") && (dirty || saving.current)) {
+        event.preventDefault(); event.stopPropagation();
+        setFeedback("Save pending changes before leaving this order.");
+      }
+    };
+    document.addEventListener("click", protectNavigation, true);
+    return () => document.removeEventListener("click", protectNavigation, true);
+  }, [dirty]);
   function update(key: string, value: string) { setFields(current => ({ ...current, [key]: value })); if (!conflict) setFeedback("Unsaved changes"); }
   function updateItem(index: number, key: keyof ItemValue, value: string) { setItems(current => current.map((item, position) => position === index ? { ...item, [key]: value } : item)); if (!conflict) setFeedback("Unsaved changes"); }
+  function changeStatus(status: string) {
+    if (busy || conflict) return;
+    if (terminalStatus(status) && (!fields.text_79__1?.trim() || !fields.closed_out_date4__1)) {
+      setFeedback("Fill in Closed Out By and Closed Out Date in Completion before marking Complete or Voided.");
+      document.getElementById("completion-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    update("status", status);
+  }
 
   return <main className="order-page">
     <header className="order-header"><div><p className="development-label">Development</p><h1>{initial.number} · {fields.name || "New Sales Order"}</h1></div>
-      <Link href="/" onClick={event => { if (dirty || saving.current) { event.preventDefault(); setFeedback("Save pending changes before returning to Sales Orders."); } }}>Sales Orders</Link>
+      <Link prefetch={false} href={terminalStatus(baseline.fields.status) ? "/completed-orders" : "/sales-orders"} onClick={event => {
+        if (dirty || saving.current) { event.preventDefault(); setFeedback("Save pending changes before returning to the order list."); }
+        else if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+          event.preventDefault();
+          // Fetch the destination from the server instead of restoring a cached list.
+          window.location.assign(terminalStatus(baseline.fields.status) ? "/completed-orders" : "/sales-orders");
+        }
+      }}>{terminalStatus(baseline.fields.status) ? "Completed Sales Orders" : "Sales Orders"}</Link>
     </header>
-    <div className="save-toolbar"><button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Order Details</button><span aria-live="polite" role="status">{feedback}</span><button disabled={busy || conflict} onClick={() => void save()}>Save now</button></div>
+    <div className="save-toolbar"><button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Order Details</button><Link href={`/orders/${initial.id}/activity`} onClick={event => { if (dirty || saving.current) { event.preventDefault(); setFeedback("Save pending changes before opening Activity Log."); } }}>Activity Log</Link><span aria-live="polite" role="status">{feedback}</span><button disabled={busy || conflict} onClick={() => void save()}>Save now</button></div>
     {conflict && <div className="save-alert" role="alert"><p>{feedback}</p><button onClick={() => { blocked.current = false; setConflict(false); void save(); }}>Retry save</button><button onClick={() => { if (window.confirm("Reload saved values? Your unsaved input will be discarded.")) window.location.reload(); }}>Reload saved values</button></div>}
-    <form onSubmit={event => { event.preventDefault(); void save(); }} onBlur={() => { void save(); }}>
-      {sections.map(section => <details key={section} className="form-section" open={section !== "Service and Labor"}><summary>{section}</summary><div className="field-grid">
+    <form onSubmit={event => { event.preventDefault(); void save(); }}>
+      {sections.map(section => <details key={section} id={section === "Completion" ? "completion-section" : undefined} className="form-section" open={section !== "Service and Labor"}><summary>{section}</summary><div className="field-grid">
         {section === "Order Overview" && <>
           <label>Name <span aria-label="required">*</span><input name="name" value={fields.name ?? ""} onChange={event => update("name", event.target.value)} required /></label>
           <label>SO Number<input value={initial.number} readOnly /></label>
-          <label>Date Entered<input type="date" value={fields.dateEntered ?? ""} onChange={event => update("dateEntered", event.target.value)} /></label>
+          <label>Date Entered<DateField label="Date Entered" value={fields.dateEntered ?? ""} onChange={value => update("dateEntered", value)} /></label>
           <label>Submitted By<input value={initial.creator} readOnly /></label>
-          <div><span>Status</span><details className="status-picker"><summary className={`status-box status-${fields.status?.replaceAll(" ", "-")}`}>{fields.status}</summary>{["Pending", "In Progress", "Expedite"].map(status => <button type="button" key={status} onClick={event => { update("status", status); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{status}</button>)}</details></div>
+          <div><span>Status</span><details className="status-picker"><summary className={`status-box status-${fields.status?.replaceAll(" ", "-")}`}>{fields.status}</summary>{orderStatuses.map(status => <button type="button" disabled={busy || conflict} key={status} onClick={event => { changeStatus(status); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{status}</button>)}</details></div>
         </>}
         {orderFields.filter(field => field.section === section).map(field => <label key={field.key}>{field.label}
           {field.options ? <select value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)}><option value="">—</option>{field.options.map(option => <option key={option}>{option}</option>)}</select>
+            : field.type === "date" ? <DateField label={field.label} value={fields[field.key] ?? ""} onChange={value => update(field.key, value)} />
             : field.type === "textarea" ? <textarea value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />
               : <input type={field.type} step={field.type === "number" ? "any" : undefined} value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />}
         </label>)}
       </div>
+      {section === "Completion" && <>
+        <p>Closed Out By and Closed Out Date are required when marking Complete or Voided.</p>
+        <div className="field-grid">{[["completedBy", "Completed By"], ["completionDate", "Completion Date (UTC)"], ["voidedBy", "Voided By"], ["voidedDate", "Voided Date (UTC)"]].map(([key, label]) => <label key={key}>{label}<input value={fields[key] ?? ""} readOnly /></label>)}</div>
+        <div className="closeout-actions"><button type="button" disabled={busy || conflict || fields.status === "Complete"} onClick={() => changeStatus("Complete")}>Mark Complete</button><button type="button" disabled={busy || conflict || fields.status === "Voided"} onClick={() => changeStatus("Voided")}>Mark Voided</button></div>
+      </>}
       {section === "Additional Information" && <div className="assignment-picker"><h3>Assigned To</h3><ul>{assigneeIds.map(id => { const user = users.find(user => user.id === id); return <li key={id}>{user?.displayName || user?.email || "Unavailable user"}{user && !user.active ? " (inactive)" : ""} <button type="button" aria-label={`Remove ${user?.displayName || user?.email || "user"}`} onClick={() => { setAssigneeIds(current => current.filter(value => value !== id)); if (!conflict) setFeedback("Unsaved changes"); }}>Remove</button></li>; })}</ul><label>Add employee<select value="" onChange={event => { if (event.target.value) { setAssigneeIds(current => [...new Set([...current, event.target.value])].sort()); if (!conflict) setFeedback("Unsaved changes"); } }}><option value="">Choose an employee</option>{users.filter(user => user.active && !assigneeIds.includes(user.id)).map(user => <option key={user.id} value={user.id}>{user.displayName || user.email}</option>)}</select></label></div>}
       {section === "Items and Pricing" && <div className="item-rows">{items.map((item, index) => <fieldset key={index}><legend>Item {index + 1}</legend><label>Quantity<input inputMode="decimal" value={item.quantity} onChange={event => updateItem(index, "quantity", event.target.value)} /></label><label>Description<input value={item.description} onChange={event => updateItem(index, "description", event.target.value)} /></label><label>Unit Price<input inputMode="decimal" value={item.unitPrice} onChange={event => updateItem(index, "unitPrice", event.target.value)} /></label></fieldset>)}<button type="button" onClick={() => { setItems(current => [...current, { description: "", quantity: "", unitPrice: "" }]); if (!conflict) setFeedback("Unsaved changes"); }}>+ Add Item</button></div>}
       </details>)}

@@ -54,6 +54,7 @@ October 7 scope addition approved by Kent: admins can add optional custom sales-
 - Autosave after a brief pause or field exit, with Saving/Saved/Couldn't save feedback. First persistence requires Name. Keep unsaved input on failure.
 - Different-field concurrent edits can save independently. Same-field competing edits show a conflict rather than silently overwriting. Apply equivalent protection to repeatable item data.
 - Date Entered defaults automatically on first save, remains editable and is the report date basis. Keep immutable creation timestamp separately.
+- October 8: clicking an editable date field opens an in-app calendar to choose the date. Use shared behavior across supported browsers, including employees who do not use Chrome. Automatically recorded completion/void timestamps remain read-only.
 - Use America/Chicago for Date Entered defaults, today on copies, and inclusive report date boundaries. Audit-display time zone remains undecided; timed calendar events continue to use event-location time zones.
 - Submitted By is the immutable original creator. Salesperson and technician fields remain free text. Assigned To selects active app users and supports multiple people.
 - Each employee can be assigned only once per order. Assigned employees are removed from the available employee dropdown; removing an assignment makes that employee available again if still active. Enforce uniqueness server-side as well as in the interface.
@@ -147,3 +148,7 @@ Verify permissions server-side, autosave/failure/conflicts, numbering concurrenc
 # Employee names — October 8 clarification
 
 Collect employee first and last names during invited signup and display their combined name in assignment choices and selected assignees. Existing accounts without names need their profile completed; do not infer names from email addresses. Authentication and approved-user access remain separate. Current implementation copies a Clerk profile name into the application's empty display name on approved access; Clerk signup name configuration still needs verification.
+
+October 8: Submitted By displays the original creator's employee name (email fallback only when no name is available); editing by another employee does not change creator identity. Approved users can read dashboard activity across saved orders and separate history for each order. Both are read-only views of the same audit records.
+
+October 8 refinement: dashboard activity is behind a View All Activity link in the top navigation; it is not displayed on login. Autosave waits for a three-second pause in changes. Moving between fields does not force a save; Save now stays immediate. Related consecutive ordinary edits by one actor to one order within one minute display as a summary from original to final values. Status and assignment events stay distinct; immutable audit records are retained.

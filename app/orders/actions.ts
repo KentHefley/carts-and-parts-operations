@@ -13,6 +13,6 @@ export async function newOrder(requestKey: string) {
 export async function persistOrder(request: SaveRequest) {
   const user = await requireApprovedUser();
   const result = await saveOrder(getDatabase(), user.id, request);
-  if (result.ok) revalidatePath("/");
+  if (result.ok) { revalidatePath("/"); revalidatePath("/sales-orders"); revalidatePath("/completed-orders"); revalidatePath("/activity"); revalidatePath(`/orders/${request.id}/activity`); }
   return result;
 }

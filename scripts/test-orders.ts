@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { developmentCredentials } from "./development-target";
 import { createDatabaseClient } from "../lib/database-client";
-import { loadOrder, reserveOrder, saveOrder } from "../lib/order-store";
+import { listOrders, loadOrder, reserveOrder, saveOrder } from "../lib/order-store";
+import { readActivity } from "../lib/activity-store";
 
 async function main() {
   const { databaseUrl } = developmentCredentials();
@@ -86,7 +87,78 @@ async function main() {
     const fresh = await loadOrder(database, order.id);
     await saveOrder(database, first.id, { id: order.id, base: fresh.fields, patch: { text_28__1: "After read" } });
     assert.equal(await database.notification.count({ where: { orderId: order.id, actorId: first.id, recipientId: second.id, kind: "edit" } }), 2);
-    console.log("PASS: concurrent/idempotent numbering, Name validation, defaults, extra items, reopen, independent edits, field/item conflicts, immutable creator and audit deduplication.");
+    const beforeClose = await loadOrder(database, order.id);
+    const invalidCloseouts: Record<string, string>[] = [{ status: "Complete", text_79__1: "  ", closed_out_date4__1: "2026-10-08" }, { status: "Voided", text_79__1: "Tester", closed_out_date4__1: "" }, { completedBy: "Spoofed actor" }, { completionDate: "2026-10-08" }];
+    for (const patch of invalidCloseouts) {
+      assert.equal((await saveOrder(database, first.id, { id: order.id, base: beforeClose.fields, patch })).ok, false);
+    }
+    assert.deepEqual(await loadOrder(database, order.id), beforeClose);
+    const completed = await saveOrder(database, second.id, { id: order.id, base: beforeClose.fields, patch: { status: "Complete", text_79__1: "Manual closeout person", closed_out_date4__1: "2026-10-08" } });
+    assert.equal(completed.ok, true);
+    if (!completed.ok) throw new Error("Completion failed");
+    assert.equal(completed.order.fields.completedBy, second.email);
+    assert.match(completed.order.fields.completionDate, /Z$/);
+    assert.equal(completed.order.fields.voidedBy, "");
+    assert.deepEqual(completed.order.items, beforeClose.items);
+    assert.deepEqual(completed.order.assigneeIds, beforeClose.assigneeIds);
+    assert.equal(completed.order.number, beforeClose.number);
+    assert.ok((await listOrders(database, true)).some(row => row.id === order.id));
+    assert.ok(!(await listOrders(database, false)).some(row => row.id === order.id));
+    const eventCount = await database.orderEvent.count({ where: { orderId: order.id } });
+    assert.equal((await saveOrder(database, second.id, { id: order.id, base: beforeClose.fields, patch: { status: "Complete", text_79__1: "Manual closeout person", closed_out_date4__1: "2026-10-08" } })).ok, true);
+    assert.equal(await database.orderEvent.count({ where: { orderId: order.id } }), eventCount);
+    assert.equal((await saveOrder(database, first.id, { id: order.id, base: beforeClose.fields, patch: { status: "Voided" } })).ok, false);
+    assert.equal((await saveOrder(database, first.id, { id: order.id, base: completed.order.fields, patch: { text_79__1: "" } })).ok, false);
+    const terminalEdit = await saveOrder(database, first.id, { id: order.id, base: completed.order.fields, patch: { text_28__1: "Terminal edit" } });
+    assert.equal(terminalEdit.ok, true);
+    const edited = await loadOrder(database, order.id);
+    assert.equal(edited.fields.status, "Complete");
+    assert.equal(edited.fields.completionDate, completed.order.fields.completionDate);
+    const voided = await saveOrder(database, first.id, { id: order.id, base: edited.fields, patch: { status: "Voided", voidReason: "Synthetic reason" } });
+    assert.equal(voided.ok, true);
+    if (!voided.ok) throw new Error("Void failed");
+    assert.equal(voided.order.fields.completedBy, "");
+    assert.equal(voided.order.fields.completionDate, "");
+    assert.equal(voided.order.fields.voidedBy, first.email);
+    assert.equal(voided.order.fields.voidReason, "Synthetic reason");
+    const recompleted = await saveOrder(database, second.id, { id: order.id, base: voided.order.fields, patch: { status: "Complete" } });
+    assert.equal(recompleted.ok, true);
+    if (!recompleted.ok) throw new Error("Recompletion failed");
+    assert.equal(recompleted.order.fields.voidedDate, "");
+    assert.equal(recompleted.order.fields.voidReason, "");
+    const reactivated = await saveOrder(database, first.id, { id: order.id, base: recompleted.order.fields, patch: { status: "Pending" } });
+    assert.equal(reactivated.ok, true);
+    if (!reactivated.ok) throw new Error("Reopen failed");
+    for (const key of ["completedBy", "completionDate", "voidedBy", "voidedDate", "voidReason"]) assert.equal(reactivated.order.fields[key], "");
+    assert.ok((await listOrders(database, false)).some(row => row.id === order.id));
+    assert.ok(!(await listOrders(database, true)).some(row => row.id === order.id));
+    const statusEvents = await database.orderEvent.findMany({ where: { orderId: order.id }, orderBy: { createdAt: "asc" } });
+    const transitions = statusEvents.map(event => (event.changes as Record<string, { after?: string }>).status?.after).filter(Boolean);
+    assert.deepEqual(transitions, ["Complete", "Voided", "Complete", "Pending"]);
+    const voidAgain = await saveOrder(database, second.id, { id: order.id, base: reactivated.order.fields, patch: { status: "Voided" } });
+    assert.equal(voidAgain.ok, true);
+    if (!voidAgain.ok) throw new Error("Second void failed");
+    const reopenVoid = await saveOrder(database, first.id, { id: order.id, base: voidAgain.order.fields, patch: { status: "In Progress" } });
+    assert.equal(reopenVoid.ok, true);
+    if (!reopenVoid.ok) throw new Error("Void reopen failed");
+    assert.equal(reopenVoid.order.fields.voidedDate, "");
+    await database.appUser.update({ where: { id: first.id }, data: { displayName: "Synthetic Creator" } });
+    assert.equal((await loadOrder(database, order.id)).creator, "Synthetic Creator");
+    const other = await saveOrder(database, second.id, { id: distinct[0].id, base: distinct[0].fields, patch: { name: "Synthetic second order" } });
+    assert.equal(other.ok, true);
+    const scoped = await readActivity(database, { orderId: order.id });
+    assert.ok(scoped.events.length > 0);
+    assert.ok(scoped.events.every(event => event.orderId === order.id));
+    const board = await readActivity(database);
+    assert.ok(board.events.some(event => event.orderId === order.id));
+    assert.ok(board.events.some(event => event.orderId === distinct[0].id));
+    if (board.nextCursor) {
+      const older = await readActivity(database, { cursor: board.nextCursor });
+      const seen = new Set(board.events.map(event => event.id));
+      assert.ok(older.events.every(event => !seen.has(event.id)));
+    }
+    await assert.rejects(readActivity(database, { cursor: "invalid" }), /Invalid activity/);
+    console.log("PASS: order persistence, conflicts, assignments, notifications, closeout, creator names, scoped/dashboard activity and pagination.");
   } finally {
     // Only this invocation's synthetic fixtures, never existing company records.
     const orders = await database.salesOrder.findMany({ where: { creatorId: { in: ids } }, select: { id: true } });

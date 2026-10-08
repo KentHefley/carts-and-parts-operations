@@ -1,30 +1,13 @@
-import { UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 import { requireApprovedUser } from "../lib/access";
 import { getDatabase } from "../lib/db";
-import { OrderList } from "./orders/order-list";
+import { listOrders } from "../lib/order-store";
+import { AuthenticatedShell } from "./ui/authenticated-shell";
 import { NewOrderButton } from "./orders/new-order-button";
-import Image from "next/image";
-import { NotificationBell } from "./notifications/notification-bell";
 
 export default async function Home() {
-  await requireApprovedUser();
-  const orders = await getDatabase().salesOrder.findMany({ where: { name: { not: null } }, orderBy: { createdAt: "desc" }, select: { id: true, number: true, name: true, fields: true, assignments: { include: { user: { select: { email: true, displayName: true, active: true } } } } } });
-
-  return (
-    <main className="mx-auto w-full max-w-5xl p-6 sm:p-10">
-      <header className="flex items-center justify-between gap-4 border-b pb-6">
-        <div>
-          <p className="text-sm font-semibold text-blue-600">Development</p>
-          <Image className="brand-logo brand-light" src="/branding/logo.png" alt="Carts and Parts, Inc." width={465} height={85} />
-          <Image className="brand-logo brand-dark" src="/branding/logo-white.png" alt="Carts and Parts, Inc." width={465} height={85} />
-          <h1 className="mt-1 text-2xl font-semibold">Carts and Parts Operations</h1>
-        </div>
-        <div className="header-actions"><NotificationBell /><UserButton /></div>
-      </header>
-      <section className="mt-10">
-        <div className="list-heading"><h2 className="text-xl font-semibold">Sales Orders</h2><NewOrderButton /></div>
-        <OrderList orders={[...orders].sort((left, right) => String((right.fields as Record<string, string>).dateEntered ?? "").localeCompare(String((left.fields as Record<string, string>).dateEntered ?? ""))).map(order => { const fields = order.fields as Record<string, string>; return { id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, name: order.name ?? "", status: fields.status ?? "In Progress", division: fields.division__1 ?? "", jobType: fields.dropdown__1 ?? "", scheduled: fields.start_job_date__1 ?? "", assigned: order.assignments.map(assignment => (assignment.user.displayName || assignment.user.email) + (assignment.user.active ? "" : " (inactive)")).join(", ") }; })} />
-      </section>
-    </main>
-  );
+  const user = await requireApprovedUser();
+  const orders = (await listOrders(getDatabase(), false)).filter(order => order.assignments.some(assignment => assignment.userId === user.id));
+  const cards: { title: string; description: string; href?: string }[] = [{ title: "Sales Orders", description: "Create and manage active orders", href: "/sales-orders" }, { title: "Completed Sales Orders", description: "Find completed and voided orders", href: "/completed-orders" }, { title: "Price Books", description: "Yellow, Blue and White books" }, { title: "Calendar", description: "Management schedules" }, { title: "Time Off/Birthday Calendar", description: "Employee events and holidays" }, ...(user.role === "ADMIN" ? [{ title: "Reports", description: "Sales and product reporting" }, { title: "Administration", description: "Employees and application settings" }] : [])];
+  return <AuthenticatedShell title="Dashboard" active="Dashboard" admin={user.role === "ADMIN"}><main className="screen-page"><div className="screen-heading"><div><p className="eyebrow">Carts and Parts Operations</p><h1>Dashboard</h1><p className="screen-caption">Your orders and operations in one place.</p></div><NewOrderButton /></div><div className="dashboard-cards">{cards.map(card => card.href ? <Link className="dashboard-card" key={card.title} href={card.href} prefetch={false}><div><h2>{card.title}</h2><p>{card.description}</p></div><span aria-hidden="true">→</span></Link> : <div className="dashboard-card card-upcoming" key={card.title}><div><h2>{card.title}</h2><p>{card.description}</p><small>Coming later</small></div></div>)}</div><section className="content-panel"><div className="panel-heading"><h2>Orders Assigned to You</h2><Link href="/sales-orders">View Sales Orders</Link></div>{orders.length ? <div className="table-scroll"><table><thead><tr><th>SO Number</th><th>Name</th><th>Status</th><th>Division</th></tr></thead><tbody>{orders.map(order => { const fields = order.fields as Record<string, string>; return <tr key={order.id}><td><Link href={`/orders/${order.id}`}>DEV-{String(order.number).padStart(6, "0")}</Link></td><td><Link href={`/orders/${order.id}`}>{order.name}</Link></td><td><span className={`status-box status-${fields.status.replaceAll(" ", "-")}`}>{fields.status}</span></td><td>{fields.division__1 || "—"}</td></tr>; })}</tbody></table></div> : <div className="empty-message">You have no active orders assigned.</div>}</section></main></AuthenticatedShell>;
 }

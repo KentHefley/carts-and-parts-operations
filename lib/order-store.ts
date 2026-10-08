@@ -2,11 +2,12 @@ import { Prisma, PrismaClient } from "../generated/prisma/client";
 import { fieldKeys, orderFields } from "./order-fields";
 import { chicagoDate, conflicts, ItemValue, OrderView, SaveRequest } from "./order-types";
 import { notifyOrderChange } from "./notification-store";
+import { orderStatuses, protectedStatusFields, terminalStatus } from "./order-status";
 
-const include = { items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true } }, assignments: { orderBy: { userId: "asc" as const } } };
+const include = { items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true, displayName: true } }, assignments: { orderBy: { userId: "asc" as const } } };
 type StoredOrder = Prisma.SalesOrderGetPayload<{ include: typeof include }>;
 export function orderView(order: StoredOrder): OrderView {
-  return { id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, creator: order.creator.email,
+  return { id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, creator: order.creator.displayName || order.creator.email,
     fields: { ...(order.fields as Record<string, string>), name: order.name ?? "" }, assigneeIds: order.assignments.map(assignment => assignment.userId),
     items: order.items.map(item => ({ description: item.description, quantity: item.quantity?.toString() ?? "", unitPrice: item.unitPrice?.toString() ?? "" })) };
 }
@@ -41,10 +42,11 @@ function validateItems(items: ItemValue[]) {
 
 function validateFields(fields: Record<string, string>) {
   for (const [key, value] of Object.entries(fields)) {
+    if (protectedStatusFields.includes(key)) throw new InputError("Completion and void details are recorded automatically and cannot be edited.");
     if (!fieldKeys.has(key) || typeof value !== "string" || value.length > 10_000) throw new InputError("Invalid field value.");
     const field = orderFields.find(field => field.key === key);
     if (field?.options && value && !field.options.includes(value)) throw new InputError(`Invalid ${field.label}.`);
-    if (key === "status" && !["Pending", "In Progress", "Expedite"].includes(value)) throw new InputError("Closeout is not available in this milestone.");
+    if (key === "status" && !orderStatuses.includes(value)) throw new InputError("Invalid status.");
     if ((key === "dateEntered" || field?.type === "date") && value) {
       const date = new Date(value + "T00:00:00Z");
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) throw new InputError(`Invalid ${field?.label ?? "Date Entered"}.`);
@@ -82,6 +84,19 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
     const next = { ...current.fields, ...request.patch };
     if (!next.name?.trim()) return { ok: false as const, message: "Name is required before saving." };
     if (!next.dateEntered) next.dateEntered = chicagoDate();
+    if (terminalStatus(next.status) && (!next.text_79__1?.trim() || !next.closed_out_date4__1)) {
+      return { ok: false as const, message: "Closed Out By and Closed Out Date are required for Complete or Voided." };
+    }
+    if (next.status !== current.fields.status) {
+      const actor = await transaction.appUser.findUniqueOrThrow({ where: { id: actorId }, select: { email: true, displayName: true } });
+      const timestamp = new Date().toISOString();
+      next.statusChangedAt = timestamp;
+      next.completedBy = next.status === "Complete" ? actor.displayName || actor.email : "";
+      next.completionDate = next.status === "Complete" ? timestamp : "";
+      next.voidedBy = next.status === "Voided" ? actor.displayName || actor.email : "";
+      next.voidedDate = next.status === "Voided" ? timestamp : "";
+      if (next.status !== "Voided") next.voidReason = "";
+    }
     const changes: Record<string, Prisma.InputJsonValue> = {};
     for (const key of Object.keys(next)) if (next[key] !== (current.fields[key] ?? "")) changes[key] = { before: current.fields[key] ?? "", after: next[key] };
     if (request.items && JSON.stringify(current.items) !== JSON.stringify(request.items)) changes.items = { before: current.items, after: request.items };
@@ -105,4 +120,13 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
 
 export async function loadOrder(database: PrismaClient, id: string) {
   return orderView(await database.salesOrder.findUniqueOrThrow({ where: { id }, include }));
+}
+
+export async function listOrders(database: PrismaClient, completed: boolean) {
+  const statuses = completed ? ["Complete", "Voided"] : ["Pending", "In Progress", "Expedite"];
+  return database.salesOrder.findMany({
+    where: { name: { not: null }, OR: statuses.map(status => ({ fields: { path: ["status"], equals: status } })) },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, number: true, name: true, fields: true, assignments: { include: { user: { select: { email: true, displayName: true, active: true } } } } },
+  });
 }

@@ -492,4 +492,5 @@ export const orderFields: FieldDefinition[] = [
     "type": "textarea"
   }
 ];
+orderFields.push({ key: "voidReason", label: "Void Reason (optional)", section: "Completion", type: "textarea" });
 export const fieldKeys = new Set(["name", "dateEntered", "status", ...orderFields.map(field => field.key)]);

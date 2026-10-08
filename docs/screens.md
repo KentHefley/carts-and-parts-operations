@@ -32,6 +32,8 @@ Compact table; no inline field editing. Click order to open wide slide-out form 
 
 Tabs: Order Details, Files, Updates, Activity Log.
 
+October 8 clarification: editable dates open a small calendar when the field is clicked. Date Entered, Scheduled Job Date and Closed Out Date use the shared picker, with month navigation, selection, clearing and keyboard access. Automatic completion/void dates remain read-only. Kent also requested an order-specific activity view while the order is open and an activity feed across orders on the dashboard; the latter is pending implementation.
+
 Clicking Order Details returns to the top of the order form, including when Order Details is already selected. In the working slide-out form, scroll its content area rather than the underlying order list.
 
 Status is a color-coded box with a clickable choice menu, not a native select dropdown. Show the status label as well as color. Exact color assignments await styling review. Division offers Oklahoma City, Dallas/Fort Worth, Houston, San Antonio, Phoenix, Cleveland and Corporate, retaining a blank selection on new/copied orders.
@@ -87,3 +89,11 @@ Use Add Sales Order Field as the navigation button label for field configuration
 - Trash: deletion time, expiry, restore within 30 days, minimal retained audit after purge.
 - Price book replacement may be accessed from its cards.
 Detailed administration layouts and how employees map to user accounts remain to be designed.
+
+October 8 implementation: the current Sales Orders landing page includes Dashboard Activity with linked SO Number/name, newest entries first, and older-page navigation through `/activity`. An order's Activity Log shows only that order. Both use readable field/item changes and explicit UTC timestamps. The broader dashboard layout described above remains planned.
+
+October 8 refinement supersedes the inline activity display above: show View All Activity in the top navigation on Sales Orders and Completed Sales Orders. `/activity` opens the paginated All Activity feed. Both activity views summarize short consecutive ordinary editing sessions and keep status/assignment events separate.
+
+## October 8 styling implementation
+
+Shared sidebar/topbar, logos, theme toggle and mockup color/spacing styles now cover Dashboard, active/completed lists, routed order forms and activity screens. Theme and collapsed navigation preferences persist per browser. Dashboard is `/`, Sales Orders is `/sales-orders`. Current Dashboard cards mark unimplemented sections as Coming later; admin cards/navigation depend on approved role. Assigned orders are restricted to the current user's active assignments. Full order slide-outs and remaining sections are still pending.
