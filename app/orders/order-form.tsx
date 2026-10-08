@@ -2,33 +2,35 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { orderFields } from "../../lib/order-fields";
-import { ItemValue, OrderView } from "../../lib/order-types";
+import { AssignableUser, ItemValue, OrderView } from "../../lib/order-types";
 import { persistOrder } from "./actions";
 
 const sections = ["Order Overview", "Billing and Store Information", "Items and Pricing", "Additional Information", "Completion", "Service and Labor"];
-export function OrderForm({ initial }: { initial: OrderView }) {
+export function OrderForm({ initial, users }: { initial: OrderView; users: AssignableUser[] }) {
   const [fields, setFields] = useState(initial.fields);
   const [items, setItems] = useState(initial.items);
+  const [assigneeIds, setAssigneeIds] = useState(initial.assigneeIds);
   const [feedback, setFeedback] = useState(initial.fields.name ? "Saved" : "Enter Name to save");
   const [conflict, setConflict] = useState(false);
   const [busy, setBusy] = useState(false);
   const [baseline, setBaseline] = useState(initial);
   const saved = useRef(initial);
-  const latest = useRef({ fields, items });
+  const latest = useRef({ fields, items, assigneeIds });
   const saving = useRef(false);
   const blocked = useRef(false);
-  const dirty = JSON.stringify(fields) !== JSON.stringify(baseline.fields) || JSON.stringify(items) !== JSON.stringify(baseline.items);
+  const dirty = JSON.stringify(fields) !== JSON.stringify(baseline.fields) || JSON.stringify(items) !== JSON.stringify(baseline.items) || JSON.stringify(assigneeIds) !== JSON.stringify(baseline.assigneeIds);
 
   const save = useCallback(async () => {
     if (saving.current || blocked.current) return;
     const snapshot = latest.current;
     const patch = Object.fromEntries(Object.entries(snapshot.fields).filter(([key, value]) => value !== (saved.current.fields[key] ?? "")));
     const itemsChanged = JSON.stringify(snapshot.items) !== JSON.stringify(saved.current.items);
-    if (!Object.keys(patch).length && !itemsChanged) return;
+    const assignmentsChanged = JSON.stringify(snapshot.assigneeIds) !== JSON.stringify(saved.current.assigneeIds);
+    if (!Object.keys(patch).length && !itemsChanged && !assignmentsChanged) return;
     if (!snapshot.fields.name?.trim()) { setFeedback("Name is required before saving"); return; }
     saving.current = true; setBusy(true); setFeedback("Saving…");
     try {
-      const result = await persistOrder({ id: initial.id, base: saved.current.fields, patch, ...(itemsChanged ? { items: snapshot.items, baseItems: saved.current.items } : {}) });
+      const result = await persistOrder({ id: initial.id, base: saved.current.fields, patch, ...(itemsChanged ? { items: snapshot.items, baseItems: saved.current.items } : {}), ...(assignmentsChanged ? { assigneeIds: snapshot.assigneeIds, baseAssigneeIds: saved.current.assigneeIds } : {}) });
       if (!result.ok) {
         blocked.current = true; setConflict(true); setFeedback(result.message + (result.conflict ? ` (${result.conflict.map(key => orderFields.find(field => field.key === key)?.label ?? key).join(", ")})` : ""));
       } else {
@@ -37,6 +39,7 @@ export function OrderForm({ initial }: { initial: OrderView }) {
         // Preserve typing that occurred while the request was in flight.
         setFields(current => Object.fromEntries(Object.entries({ ...result.order.fields, ...current }).map(([key, value]) => [key, value === (snapshot.fields[key] ?? "") ? (result.order.fields[key] ?? "") : value])));
         setItems(current => JSON.stringify(current) === JSON.stringify(snapshot.items) ? result.order.items : current);
+        setAssigneeIds(current => JSON.stringify(current) === JSON.stringify(snapshot.assigneeIds) ? result.order.assigneeIds : current);
         setFeedback("Saved");
       }
     } catch { blocked.current = true; setConflict(true); setFeedback("Couldn’t save. Your input is still here. Retry when the connection returns."); }
@@ -44,9 +47,9 @@ export function OrderForm({ initial }: { initial: OrderView }) {
   }, [initial.id]);
 
   useEffect(() => {
-    latest.current = { fields, items };
+    latest.current = { fields, items, assigneeIds };
     if (!conflict) { const timer = setTimeout(() => { void save(); }, 700); return () => clearTimeout(timer); }
-  }, [fields, items, conflict, save, busy]);
+  }, [fields, items, assigneeIds, conflict, save, busy]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (dirty || saving.current) event.preventDefault(); };
     window.addEventListener("beforeunload", warn);
@@ -77,6 +80,7 @@ export function OrderForm({ initial }: { initial: OrderView }) {
               : <input type={field.type} step={field.type === "number" ? "any" : undefined} value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />}
         </label>)}
       </div>
+      {section === "Additional Information" && <div className="assignment-picker"><h3>Assigned To</h3><ul>{assigneeIds.map(id => { const user = users.find(user => user.id === id); return <li key={id}>{user?.displayName || user?.email || "Unavailable user"}{user && !user.active ? " (inactive)" : ""} <button type="button" aria-label={`Remove ${user?.displayName || user?.email || "user"}`} onClick={() => { setAssigneeIds(current => current.filter(value => value !== id)); if (!conflict) setFeedback("Unsaved changes"); }}>Remove</button></li>; })}</ul><label>Add employee<select value="" onChange={event => { if (event.target.value) { setAssigneeIds(current => [...new Set([...current, event.target.value])].sort()); if (!conflict) setFeedback("Unsaved changes"); } }}><option value="">Choose an employee</option>{users.filter(user => user.active && !assigneeIds.includes(user.id)).map(user => <option key={user.id} value={user.id}>{user.displayName || user.email}</option>)}</select></label></div>}
       {section === "Items and Pricing" && <div className="item-rows">{items.map((item, index) => <fieldset key={index}><legend>Item {index + 1}</legend><label>Quantity<input inputMode="decimal" value={item.quantity} onChange={event => updateItem(index, "quantity", event.target.value)} /></label><label>Description<input value={item.description} onChange={event => updateItem(index, "description", event.target.value)} /></label><label>Unit Price<input inputMode="decimal" value={item.unitPrice} onChange={event => updateItem(index, "unitPrice", event.target.value)} /></label></fieldset>)}<button type="button" onClick={() => { setItems(current => [...current, { description: "", quantity: "", unitPrice: "" }]); if (!conflict) setFeedback("Unsaved changes"); }}>+ Add Item</button></div>}
       </details>)}
     </form>

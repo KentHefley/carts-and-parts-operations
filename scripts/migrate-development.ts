@@ -9,7 +9,7 @@ async function main() {
     const unexpected = await database.$queryRaw<{ count: bigint }[]>`
       SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name NOT IN ('AppUser', '_prisma_migrations', 'SalesOrder', 'OrderItem', 'OrderEvent')
+        AND table_name NOT IN ('AppUser', '_prisma_migrations', 'SalesOrder', 'OrderItem', 'OrderEvent', 'OrderAssignment', 'Notification')
     `;
     if (unexpected[0].count !== BigInt(0)) throw new Error("Unexpected existing tables; migration stopped.");
     console.log("Verified development database and expected table scope.");

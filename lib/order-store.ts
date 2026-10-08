@@ -1,12 +1,13 @@
 import { Prisma, PrismaClient } from "../generated/prisma/client";
 import { fieldKeys, orderFields } from "./order-fields";
 import { chicagoDate, conflicts, ItemValue, OrderView, SaveRequest } from "./order-types";
+import { notifyOrderChange } from "./notification-store";
 
-const include = { items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true } } };
+const include = { items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true } }, assignments: { orderBy: { userId: "asc" as const } } };
 type StoredOrder = Prisma.SalesOrderGetPayload<{ include: typeof include }>;
 export function orderView(order: StoredOrder): OrderView {
   return { id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, creator: order.creator.email,
-    fields: { ...(order.fields as Record<string, string>), name: order.name ?? "" },
+    fields: { ...(order.fields as Record<string, string>), name: order.name ?? "" }, assigneeIds: order.assignments.map(assignment => assignment.userId),
     items: order.items.map(item => ({ description: item.description, quantity: item.quantity?.toString() ?? "", unitPrice: item.unitPrice?.toString() ?? "" })) };
 }
 
@@ -40,22 +41,27 @@ function validateItems(items: ItemValue[]) {
 
 function validateFields(fields: Record<string, string>) {
   for (const [key, value] of Object.entries(fields)) {
-    if (!fieldKeys.has(key) || typeof value !== "string" || value.length > 10_000) throw new Error("Invalid field value.");
+    if (!fieldKeys.has(key) || typeof value !== "string" || value.length > 10_000) throw new InputError("Invalid field value.");
     const field = orderFields.find(field => field.key === key);
-    if (field?.options && value && !field.options.includes(value)) throw new Error(`Invalid ${field.label}.`);
-    if (key === "status" && !["Pending", "In Progress", "Expedite"].includes(value)) throw new Error("Closeout is not available in this milestone.");
-    if ((key === "dateEntered" || field?.type === "date") && value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || new Date(value + "T00:00:00Z").toISOString().slice(0, 10) !== value)) throw new Error("Invalid date.");
-    if (field?.type === "time" && value && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) throw new Error("Invalid time.");
-    if (field?.type === "number" && value && !/^-?\d+(\.\d+)?$/.test(value)) throw new Error("Invalid number.");
+    if (field?.options && value && !field.options.includes(value)) throw new InputError(`Invalid ${field.label}.`);
+    if (key === "status" && !["Pending", "In Progress", "Expedite"].includes(value)) throw new InputError("Closeout is not available in this milestone.");
+    if ((key === "dateEntered" || field?.type === "date") && value) {
+      const date = new Date(value + "T00:00:00Z");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) throw new InputError(`Invalid ${field?.label ?? "Date Entered"}.`);
+    }
+    if (field?.type === "time" && value && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) throw new InputError(`Invalid ${field.label}.`);
+    if (field?.type === "number" && value && !/^-?\d+(\.\d+)?$/.test(value)) throw new InputError(`Invalid ${field.label}.`);
   }
 }
 
 export async function saveOrder(database: PrismaClient, actorId: string, request: SaveRequest): Promise<{ ok: true; order: OrderView } | { ok: false; message: string; conflict?: string[] }> {
   if (!request || typeof request.id !== "string" || !request.patch || !request.base) throw new Error("Invalid save request.");
-  validateFields(request.patch);
   try {
+    validateFields(request.patch);
     if (request.items) validateItems(request.items);
     if (request.baseItems) validateItems(request.baseItems);
+    for (const ids of [request.assigneeIds, request.baseAssigneeIds]) if (ids !== undefined && (!Array.isArray(ids) || ids.some(id => typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) || new Set(ids).size !== ids.length)) throw new InputError("Assignments must contain each user only once.");
+    if (request.assigneeIds && !request.baseAssigneeIds) throw new InputError("Missing previous assignments.");
   } catch (error) {
     if (error instanceof InputError) return { ok: false as const, message: error.message };
     throw error;
@@ -65,14 +71,21 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
     const order = await transaction.salesOrder.findUniqueOrThrow({ where: { id: request.id }, include });
     const current = orderView(order);
     const conflictingFields = conflicts(current.fields, request.base, request.patch);
+    const assigneeIds = request.assigneeIds ? [...request.assigneeIds].sort() : current.assigneeIds;
+    const assignmentChanged = JSON.stringify(assigneeIds) !== JSON.stringify(current.assigneeIds);
+    if (request.assigneeIds && assignmentChanged && JSON.stringify(current.assigneeIds) !== JSON.stringify([...(request.baseAssigneeIds ?? [])].sort())) conflictingFields.push("Assigned To");
     if (request.items && JSON.stringify(current.items) !== JSON.stringify(request.baseItems) && JSON.stringify(current.items) !== JSON.stringify(request.items)) conflictingFields.push("Item rows");
     if (conflictingFields.length) return { ok: false as const, conflict: conflictingFields, message: "Someone else changed these fields. Your input is preserved. Reload to review their saved values." };
+    const addedIds = assigneeIds.filter(id => !current.assigneeIds.includes(id));
+    const activeAdded = await transaction.appUser.count({ where: { id: { in: addedIds }, active: true } });
+    if (activeAdded !== addedIds.length) return { ok: false as const, message: "Only active approved users can be newly assigned." };
     const next = { ...current.fields, ...request.patch };
     if (!next.name?.trim()) return { ok: false as const, message: "Name is required before saving." };
     if (!next.dateEntered) next.dateEntered = chicagoDate();
     const changes: Record<string, Prisma.InputJsonValue> = {};
     for (const key of Object.keys(next)) if (next[key] !== (current.fields[key] ?? "")) changes[key] = { before: current.fields[key] ?? "", after: next[key] };
     if (request.items && JSON.stringify(current.items) !== JSON.stringify(request.items)) changes.items = { before: current.items, after: request.items };
+    if (assignmentChanged) changes.assignments = { before: current.assigneeIds, after: assigneeIds };
     if (!Object.keys(changes).length) return { ok: true as const, order: current };
     const { name, ...values } = next;
     await transaction.salesOrder.update({ where: { id: order.id }, data: { name, fields: values } });
@@ -80,7 +93,12 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
       await transaction.orderItem.deleteMany({ where: { orderId: order.id } });
       await transaction.orderItem.createMany({ data: request.items.map((item, position) => ({ orderId: order.id, position, description: item.description, quantity: item.quantity || null, unitPrice: item.unitPrice || null })) });
     }
+    if (assignmentChanged) {
+      await transaction.orderAssignment.deleteMany({ where: { orderId: order.id, userId: { notIn: assigneeIds } } });
+      if (addedIds.length) await transaction.orderAssignment.createMany({ data: addedIds.map(userId => ({ orderId: order.id, userId })) });
+    }
     await transaction.orderEvent.create({ data: { orderId: order.id, actorId, changes } });
+    await notifyOrderChange(transaction, order.id, actorId, addedIds, Object.keys(changes).some(key => key !== "assignments"));
     return { ok: true as const, order: orderView(await transaction.salesOrder.findUniqueOrThrow({ where: { id: order.id }, include })) };
   });
 }

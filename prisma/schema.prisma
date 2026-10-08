@@ -17,12 +17,16 @@ model AppUser {
   id          String   @id @default(uuid()) @db.Uuid
   clerkUserId String   @unique
   email       String   @unique
+  displayName String?
   role        UserRole @default(USER)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orders      SalesOrder[]
   events      OrderEvent[]
+  assignments OrderAssignment[]
+  notifications Notification[] @relation("Recipient")
+  sentNotifications Notification[] @relation("Actor")
 }
 
 model SalesOrder {
@@ -37,6 +41,8 @@ model SalesOrder {
   updatedAt  DateTime @updatedAt
   items      OrderItem[]
   events     OrderEvent[]
+  assignments OrderAssignment[]
+  notifications Notification[]
   @@unique([creatorId, requestKey])
 }
 
@@ -59,4 +65,29 @@ model OrderEvent {
   actor     AppUser @relation(fields: [actorId], references: [id])
   createdAt DateTime @default(now())
   changes   Json
+}
+
+model OrderAssignment {
+  orderId String @db.Uuid
+  userId String @db.Uuid
+  order SalesOrder @relation(fields: [orderId], references: [id])
+  user AppUser @relation(fields: [userId], references: [id])
+  @@id([orderId, userId])
+  @@index([userId])
+}
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+  recipientId String @db.Uuid
+  actorId String @db.Uuid
+  orderId String @db.Uuid
+  recipient AppUser @relation("Recipient", fields: [recipientId], references: [id])
+  actor AppUser @relation("Actor", fields: [actorId], references: [id])
+  order SalesOrder @relation(fields: [orderId], references: [id])
+  kind String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  readAt DateTime?
+  @@index([recipientId, readAt, updatedAt])
+  @@index([orderId, actorId, kind, updatedAt])
 }

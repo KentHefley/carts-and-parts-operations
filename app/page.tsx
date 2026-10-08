@@ -4,10 +4,11 @@ import { getDatabase } from "../lib/db";
 import { OrderList } from "./orders/order-list";
 import { NewOrderButton } from "./orders/new-order-button";
 import Image from "next/image";
+import { NotificationBell } from "./notifications/notification-bell";
 
 export default async function Home() {
   await requireApprovedUser();
-  const orders = await getDatabase().salesOrder.findMany({ where: { name: { not: null } }, orderBy: { createdAt: "desc" }, select: { id: true, number: true, name: true, fields: true } });
+  const orders = await getDatabase().salesOrder.findMany({ where: { name: { not: null } }, orderBy: { createdAt: "desc" }, select: { id: true, number: true, name: true, fields: true, assignments: { include: { user: { select: { email: true, displayName: true, active: true } } } } } });
 
   return (
     <main className="mx-auto w-full max-w-5xl p-6 sm:p-10">
@@ -18,11 +19,11 @@ export default async function Home() {
           <Image className="brand-logo brand-dark" src="/branding/logo-white.png" alt="Carts and Parts, Inc." width={465} height={85} />
           <h1 className="mt-1 text-2xl font-semibold">Carts and Parts Operations</h1>
         </div>
-        <UserButton />
+        <div className="header-actions"><NotificationBell /><UserButton /></div>
       </header>
       <section className="mt-10">
         <div className="list-heading"><h2 className="text-xl font-semibold">Sales Orders</h2><NewOrderButton /></div>
-        <OrderList orders={[...orders].sort((left, right) => String((right.fields as Record<string, string>).dateEntered ?? "").localeCompare(String((left.fields as Record<string, string>).dateEntered ?? ""))).map(order => { const fields = order.fields as Record<string, string>; return { id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, name: order.name ?? "", status: fields.status ?? "In Progress", division: fields.division__1 ?? "", jobType: fields.dropdown__1 ?? "", scheduled: fields.start_job_date__1 ?? "" }; })} />
+        <OrderList orders={[...orders].sort((left, right) => String((right.fields as Record<string, string>).dateEntered ?? "").localeCompare(String((left.fields as Record<string, string>).dateEntered ?? ""))).map(order => { const fields = order.fields as Record<string, string>; return { id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, name: order.name ?? "", status: fields.status ?? "In Progress", division: fields.division__1 ?? "", jobType: fields.dropdown__1 ?? "", scheduled: fields.start_job_date__1 ?? "", assigned: order.assignments.map(assignment => (assignment.user.displayName || assignment.user.email) + (assignment.user.active ? "" : " (inactive)")).join(", ") }; })} />
       </section>
     </main>
   );

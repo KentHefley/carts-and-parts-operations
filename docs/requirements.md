@@ -85,6 +85,7 @@ Restoration retains the order's previous status and assignments. Flag assigned u
 - Assignment generates a bell notification, never an email.
 - Order field changes, new comments and file uploads/deletions notify all other active users; exclude the actor.
 - Group nearby edits into one bell notification while logging each saved change.
+- October 8: use rolling 60-second grouping for unread edits to the same order by the same actor. Newly assigned users receive a distinct assignment alert. Retain notifications until an explicit cleanup policy is agreed; reading an alert starts a fresh group for later edits.
 - Comments support mentions of active users. Mention recipients get targeted bell notifications without email and without duplicate general comment alerts.
 - Bell has unread count and mark-all-as-read.
 - All approved users can view read-only order history; admins cannot alter it. Record actor, time, changed fields and previous/new values, status and assignment changes, file actions, comment actions and email sends.
@@ -143,3 +144,6 @@ Use inclusive selected Date Entered dates. Include Pending, In Progress, Expedit
 ## Validation before release
 
 Verify permissions server-side, autosave/failure/conflicts, numbering concurrency, copies/resets, status metadata, notification grouping/mentions, email snapshots/retries, file retention/deletion, Trash expiry/restore, recurrence/time zones, printing and known report totals. Agree on field mapping and unresolved definitions before application implementation. No production launch, purchases, Monday changes or historical migration are authorized by this document.
+# Employee names — October 8 clarification
+
+Collect employee first and last names during invited signup and display their combined name in assignment choices and selected assignees. Existing accounts without names need their profile completed; do not infer names from email addresses. Authentication and approved-user access remain separate. Current implementation copies a Clerk profile name into the application's empty display name on approved access; Clerk signup name configuration still needs verification.

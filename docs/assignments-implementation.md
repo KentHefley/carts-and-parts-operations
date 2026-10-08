@@ -1,0 +1,9 @@
+# Assignments and bell increment — October 8, 2026
+
+Implement active approved-user assignment with database uniqueness, preservation of existing inactive assignees, conflict protection and actor/before/after history. Selected users disappear from available choices; removing a user makes them selectable again if active. Populate Assigned To in the order list. No assignment email.
+
+Add durable, recipient-owned bell notifications, unread count, order links and mark-all-as-read. Every notification read/update is authenticated and restricted to its recipient. Assignment alerts target newly assigned users; field edits target other active users. Keep assignment alerts distinct from edit alerts to avoid duplicates. Kent approved rolling 60-second same-order/same-actor edit grouping and retention until a cleanup policy is agreed. Group only unread edit alerts; a later edit after reading creates a new unread alert. Self-generated alerts are excluded. Assignment-only removal is audited but has no new-assignee alert. Poll every 15 seconds while the page is visible and on focus/open; do not imply push delivery. Latest 50 alerts are listed; unread count covers all.
+
+Use an additive migration only on the verified development endpoint. Do not create Clerk users, import employees or change account permissions to populate the picker. Current approved accounts are the available directory for this increment.
+
+Acceptance: unique assignments; active-only new selection; inactive existing selections retained/flagged; stale assignment edits rejected; idempotent retries produce no duplicate history/alerts; changes and alerts commit atomically; recipient-only reads/read marking; red unread bell; list assignee values; no email. Verify database scenarios and available authenticated browser flow. Multi-user browser coverage requires separately authorized accounts.

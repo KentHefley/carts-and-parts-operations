@@ -55,7 +55,7 @@ Kent approved all six supplied recommendations on October 5, 2026: terminal-stat
 - Confirm other copied job-specific fields/notes beyond the explicitly agreed reset list.
 - Define first-admin provisioning and protect against accidentally removing the last administrator.
 - Define upload types/sizes/storage limits, preview behavior and cleanup retry handling.
-- Define precise notification grouping interval, persistence/read retention, deletion/restoration notifications and treatment of comment edits/deletions.
+- October 8: Kent approved rolling 60-second same-order/same-actor edit grouping, distinct new-assignee alerts and retention until a cleanup policy is agreed. Deletion/restoration notifications and treatment of comment edits/deletions remain unresolved.
 - Confirm recurrence patterns, exceptions and daylight-saving behavior; optional person/location calendar filters remain undecided.
 - Specify report columns, totals/blank-data presentation, sorting and download layouts.
 - Confirm sender/reply-to/domain for email and failure/retry handling; no provider purchases authorized.

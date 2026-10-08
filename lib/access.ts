@@ -17,6 +17,8 @@ export async function requireApprovedUser() {
     banned: identity.banned,
     locked: identity.locked,
   }) || !account) redirect("/access-denied");
+  const profileName = [identity.firstName, identity.lastName].filter(Boolean).join(" ").trim();
+  if (!account.displayName && profileName) await getDatabase().appUser.update({ where: { id: account.id }, data: { displayName: profileName } });
   return { id: account.id, role: account.role };
 }
 
