@@ -52,6 +52,10 @@ body {
 
 input, select, textarea { display:block; width:100%; border:1px solid #9ca3af; border-radius:6px; padding:9px 10px; margin-top:6px; background:var(--background); color:var(--foreground); }
 input[readonly] { opacity:.75; }
+.invoice-copy-control { grid-column:1 / -1; }
+.invoice-copy-control label { display:flex; align-items:center; gap:8px; cursor:pointer; }
+.invoice-copy-control input[type="checkbox"] { width:18px; height:18px; margin:0; padding:0; flex-shrink:0; accent-color:var(--accent, #1963b8); }
+.invoice-copy-control small { display:block; margin-top:6px; color:var(--muted, #64748b); }
 label { font-size:14px; font-weight:600; }
 button { cursor:pointer; border:1px solid #9ca3af; border-radius:6px; padding:8px 14px; }
 button:disabled { cursor:wait; opacity:.55; }

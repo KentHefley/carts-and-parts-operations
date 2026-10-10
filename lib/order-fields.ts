@@ -109,31 +109,31 @@ export const orderFields: FieldDefinition[] = [
   },
   {
     "key": "text_16__1",
-    "label": "Inv Address",
+    "label": "Invoice Address",
     "section": "Billing and Store Information",
     "type": "text"
   },
   {
     "key": "text_17__1",
-    "label": "Inv City",
+    "label": "Invoice City",
     "section": "Billing and Store Information",
     "type": "text"
   },
   {
     "key": "text_18__1",
-    "label": "Inv State",
+    "label": "Invoice State",
     "section": "Billing and Store Information",
     "type": "text"
   },
   {
     "key": "text_19__1",
-    "label": "Inv Zip",
+    "label": "Invoice ZIP",
     "section": "Billing and Store Information",
     "type": "text"
   },
   {
     "key": "text_15__1",
-    "label": "Inv Contact Name",
+    "label": "Invoice Contact Name",
     "section": "Billing and Store Information",
     "type": "text"
   },

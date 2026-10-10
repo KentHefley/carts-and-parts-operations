@@ -101,3 +101,9 @@ October 8 refinement supersedes the inline activity display above: show View All
 Shared sidebar/topbar, logos, theme toggle and mockup color/spacing styles now cover Dashboard, active/completed lists, routed order forms and activity screens. Theme and collapsed navigation preferences persist per browser. Dashboard is `/`, Sales Orders is `/sales-orders`. Current Dashboard cards mark unimplemented sections as Coming later; admin cards/navigation depend on approved role. Assigned orders are restricted to the current user's active assignments. Full order slide-outs and remaining sections are still pending.
 
 October 8 order-control refinement: Order Details and Activity Log share the same sticky left-aligned navigation on both views, retaining the order header and selected-tab styling. Creator/admin sees a disabled Send SO Email placeholder beside Add employee while Resend setup is pending. No messages are sent in this milestone.
+
+October 10: Same as Invoice checkbox and explanatory text appear at the top of Billing and Store Information; copies six fields into Store information once, preserving editability.
+
+October 10 placement refinement: Store Same as Invoice appears immediately before Store Name, spanning the grid width so Store fields begin together on the next row. Copy behavior is unchanged.
+
+October 10: Successful SO email toast/confetti dismisses after five seconds or when clicking the order form. Error toasts retain manual dismissal.

@@ -8,14 +8,19 @@ const selection = [
   ["Store Name", "text_21__1"], ["Store Number", "text_22__1"], ["Store Address", "text_24__1"], ["Store City", "text_25__1"], ["Store State", "text_26__1"], ["Store ZIP", "text_27__1"], ["Store Contact", "text_23__1"], ["Store Phone", "text_30__1"], ["Email", "text_31__1"], ["Description of Service", "text_32__1"],
 ] as const;
 const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
+const sectionStarts = new Set(["Invoice To", "Store Name", "Description of Service"]);
 
 export function orderEmailTemplate(order: OrderView) {
   const rows: [string, string][] = selection.map(([label, key]) => [label, order.fields[key] ?? ""]);
-  order.items.forEach((item, index) => rows.push([`Item ${index + 1} Quantity`, item.quantity], [`Item ${index + 1} Description`, item.description]));
+  order.items.forEach((item, index) => {
+    if ([item.quantity, item.description, item.unitPrice].some(value => value.trim())) {
+      rows.push([`Item ${index + 1} Quantity`, item.quantity], [`Item ${index + 1} Description`, item.description]);
+    }
+  });
   rows.push(["Labor Description", order.fields.text81__1 ?? ""], ["Travel Description", order.fields.text32__1 ?? ""], ["AM Description", order.fields.text14__1 ?? ""], ["SO Additional Info", order.fields.additional_info__1 ?? ""], ["Submitted By", order.creator]);
   return {
     subject: `SALES ORDER: ${order.number}`,
-    text: rows.map(([label, value]) => `${label}: ${value}`).join("\n"),
-    html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:17px;color:#111"><h1 style="font-size:16px;line-height:20px;margin:0 0 6px">Sales Order ${escape(order.number)}</h1>${rows.map(([label, value]) => `<div style="margin:0;padding:0;line-height:17px;overflow-wrap:anywhere">${escape(label)}: <span style="white-space:pre-wrap">${escape(value)}</span></div>`).join("")}</div>`,
+    text: rows.map(([label, value]) => `${sectionStarts.has(label) ? "\n" : ""}${label}: ${value}`).join("\n"),
+    html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:17px;color:#111"><h1 style="font-size:16px;line-height:20px;margin:0 0 6px">Sales Order ${escape(order.number)}</h1>${rows.map(([label, value]) => `<div style="margin:${sectionStarts.has(label) ? "17px 0 0" : "0"};padding:0;line-height:17px;overflow-wrap:anywhere">${escape(label)}: <span style="white-space:pre-wrap">${escape(value)}</span></div>`).join("")}</div>`,
   };
 }
