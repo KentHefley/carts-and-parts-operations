@@ -11,7 +11,7 @@ export default async function ActivityPage({ params, searchParams }: { params: P
   const user = await requireApprovedUser();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const order = await getDatabase().salesOrder.findUnique({ where: { id }, select: { name: true, number: true, fields: true } });
+  const order = await getDatabase().salesOrder.findFirst({ where: { id, deletedAt: null }, select: { name: true, number: true, fields: true } });
   if (!order) notFound();
   const { before } = await searchParams;
   const cursor = typeof before === "string" && /^[0-9a-f-]{36}$/i.test(before) ? before : undefined;

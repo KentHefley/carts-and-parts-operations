@@ -2,7 +2,7 @@
 
 ## Confirmed scope
 
-Kent approved PDF, JPG/JPEG, PNG and WebP, up to 20 MB per file, preserving original bytes and quality. Cloudflare account and R2 bucket do not exist yet. R2 remains the proposed storage provider; no subscription or paid service has been activated by the agent.
+Kent approved PDF, JPG/JPEG, PNG and WebP, up to 20 MB per file, preserving original bytes and quality. Kent created the company Cloudflare account, activated R2 billing, configured the private development bucket and credentials, and saved localhost PUT CORS. No purchase or subscription was activated by the agent.
 
 Assigned employees and admins may upload/delete; all approved users may list, preview and download. Complete/Voided retain the same files. Individual deletion cannot be restored. Files are excluded from SO email and copied orders. Record uploads/deletions in immutable order history and notify other active users according to requirements.md.
 
@@ -31,4 +31,4 @@ Create a private bucket such as `carts-parts-operations-development`, using Stan
 
 Official references checked October 11: https://developers.cloudflare.com/r2/get-started/ ; https://developers.cloudflare.com/r2/pricing/ ; https://developers.cloudflare.com/r2/api/s3/presigned-urls/
 
-No application implementation, dependency installation, migration or live-storage verification is claimed by this plan.
+Implementation update: the Files tab, permission-controlled upload/finalization, private preview/download, deletion, audit/notifications and admin retry cleanup are implemented. AWS SDK 3.1149.0 is pinned, the attachment migration is applied to development, and synthetic permission/idempotency/type/retention/recovery tests plus real development R2 original-byte upload/read/delete checks passed. Local CORS preflight passed after Kent saved the policy. Public-access settings still require Kent's confirmation. Individual staging cleanup currently needs the admin retry control; unattended cleanup/lifecycle setup remains a pre-pilot task. Whole-order expiration cleanup is documented separately in trash-milestone.md and deployment.md.

@@ -115,3 +115,19 @@ Final checks: order regression suite, lint and production build passed; lint ret
 # Final October 8 — Two closeout paths
 
 Order regression suite passed: manual Complete/Voided requires entered name/date; quick mode supplies the authenticated actor and today's Chicago date; browser-supplied actor/date cannot override them; repeated quick requests add no event or change recorded values; notes and quick-void reason survive. A quick-mode request for an active status is rejected. Isolated OrderForm with mock save actions confirmed bottom Mark Complete rejects blank details while Status → Complete fills them and saves promptly without a warning; Status → Voided preserves the entered reason and notes. Temporary fixture files were removed. Actual authenticated Chrome remains Kent's final review.
+
+## October 11 — Whole-order Trash
+
+Run `npm run test:trash` for synthetic database/permission tests; `npx tsx scripts/test-trash.ts --r2` additionally verifies real development storage retention and permanent deletion. These commands check the exact development target and delete their own fixtures. Run database suites sequentially: ordinary notification fan-out makes concurrently active synthetic accounts interact.
+
+Covered: creator/admin/noncreator/inactive access, exactly 30 elapsed days, repeated deletion without extending expiry, restoring the same status/items/assignments/files, inactive assignment flags, blocked stale saves and email/upload attempts, hidden lists/activity/file access, all-storage and partial-storage failure, resumable progress, minimal tombstone and removed related rows. Separate browser fixture exercised actual controls with fake actions for cancel/confirm, duplicate clicks, navigation and visible failure/success feedback. The real signed-out Trash route required login; unauthenticated maintenance returned 401.
+
+Kent's authenticated employee check:
+
+1. Use a disposable development order with an attachment; save any edits.
+2. Delete Sales Order and confirm it disappears from active/completed lists and its old direct link no longer opens it.
+3. Open Administration → Trash and verify previous status, assignments, file count and expiration.
+4. Restore it and verify its SO Number, details and attachment still match.
+5. Confirm a noncreator regular user cannot delete the order or open Administration/Trash.
+
+Do not shorten retention on company orders for testing. Expiration and R2 removal are tested only through synthetic fixtures. Hosted daily scheduling remains unverified until configured and deployed with authorization; localhost has manual admin cleanup.

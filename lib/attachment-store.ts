@@ -7,7 +7,7 @@ import { notifyOrderChange } from "./notification-store";
 async function access(tx: Prisma.TransactionClient, orderId: string, actorId: string, write = false) {
   if (!validAttachmentId(orderId) || !validAttachmentId(actorId)) throw new Error("Invalid order or account.");
   await tx.$queryRaw`SELECT id FROM "SalesOrder" WHERE id = ${orderId}::uuid FOR UPDATE`;
-  const order = await tx.salesOrder.findUnique({ where: { id: orderId }, select: { name: true } });
+  const order = await tx.salesOrder.findFirst({ where: { id: orderId, deletedAt: null }, select: { name: true } });
   const actor = await tx.appUser.findUnique({ where: { id: actorId }, select: { active: true, role: true } });
   if (!order || !actor?.active) throw new Error("Order access is unavailable.");
   if (write) {

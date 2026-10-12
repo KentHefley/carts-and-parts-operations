@@ -9,6 +9,8 @@ import { DateField } from "./date-field";
 import { OrderTabs } from "./order-tabs";
 import { sendSOEmail } from "./email-actions";
 import { EmailToast } from "./email-toast";
+import { DeleteOrderButton } from "./delete-order-button";
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
 
 const sections = ["Order Overview", "Billing and Store Information", "Items and Pricing", "Additional Information", "Completion", "Service and Labor"];
 const invoiceStorePairs = [
@@ -33,6 +35,7 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
   const [assigneeIds, setAssigneeIds] = useState(initial.assigneeIds);
   const [feedback, setFeedback] = useState(initial.fields.name ? "Saved" : "Enter Name to save");
   const [conflict, setConflict] = useState(false);
+  const [reloadOpen, setReloadOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [baseline, setBaseline] = useState(initial);
   const [closeoutError, setCloseoutError] = useState(false);
@@ -42,6 +45,7 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
   const dismissEmailToast = useCallback(() => setToast(null), []);
   const emailKey = useRef<string | undefined>(undefined);
   const sendingEmail = useRef(false);
+  const discardConfirmed = useRef(false);
   const saved = useRef(initial);
   const latest = useRef({ fields, items, assigneeIds });
   const saving = useRef(false);
@@ -101,7 +105,7 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
     if (!conflict && (quick || !(terminalStatus(fields.status) && missingCloseout(fields)))) { const timer = setTimeout(() => { void save(); }, quick ? 0 : 3000); return () => clearTimeout(timer); }
   }, [fields, items, assigneeIds, conflict, save, busy]);
   useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => { if (dirty || saving.current) event.preventDefault(); };
+    const warn = (event: BeforeUnloadEvent) => { if (!discardConfirmed.current && (dirty || saving.current)) event.preventDefault(); };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
@@ -154,7 +158,8 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
     </header>
     <div className="save-toolbar"><OrderTabs orderId={initial.id} current="details" /><span aria-live="polite" role="status">{feedback}</span><button disabled={busy || conflict || emailBusy} onClick={() => void save()}>Save now</button></div>
     {toast && <EmailToast {...toast} onClose={dismissEmailToast} />}
-    {conflict && <div className="save-alert" role="alert"><p>{feedback}</p><button onClick={() => { blocked.current = false; setConflict(false); void save(); }}>Retry save</button><button onClick={() => { if (window.confirm("Reload saved values? Your unsaved input will be discarded.")) window.location.reload(); }}>Reload saved values</button></div>}
+    {conflict && <div className="save-alert" role="alert"><p>{feedback}</p><button onClick={() => { blocked.current = false; setConflict(false); void save(); }}>Retry save</button><button onClick={() => setReloadOpen(true)}>Reload saved values</button></div>}
+    {reloadOpen && <ConfirmationDialog title="Reload saved values?" description="Your unsaved input will be discarded and replaced with the saved order values." confirmLabel="Reload Saved Values" onCancel={() => setReloadOpen(false)} onConfirm={() => { discardConfirmed.current = true; window.location.reload(); }} />}
     <form onClick={() => { if (toast?.success) dismissEmailToast(); }} onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset className="email-form-lock" disabled={emailBusy}>
       {sections.map(section => <details key={section} id={section === "Completion" ? "completion-section" : undefined} className="form-section" open={section !== "Service and Labor"}><summary>{section}</summary><div className="field-grid">
@@ -200,5 +205,6 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
       </details>)}
       </fieldset>
     </form>
+    {canSendEmail && <DeleteOrderButton orderId={initial.id} disabled={dirty || busy || conflict || emailBusy} />}
   </main>;
 }

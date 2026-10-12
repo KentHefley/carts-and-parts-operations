@@ -16,7 +16,7 @@ const canonical = (value: unknown): string => {
 async function authorize(database: Prisma.TransactionClient, actorId: string, orderId: string) {
   const actor = await database.appUser.findUnique({ where: { id: actorId } });
   const order = await database.salesOrder.findUnique({ where: { id: orderId }, include });
-  if (!actor?.active || !order || (actor.role !== "ADMIN" && order.creatorId !== actor.id)) throw new EmailInputError("Only the order creator or an approved administrator can send SO email.");
+  if (!actor?.active || !order || order.deletedAt || (actor.role !== "ADMIN" && order.creatorId !== actor.id)) throw new EmailInputError("Only the order creator or an approved administrator can send SO email for an order outside Trash.");
   return order;
 }
 
@@ -47,6 +47,9 @@ export async function sendQueuedEmail(database: PrismaClient, actorId: string, m
   emailConfiguration();
   if (!uuid.test(messageId)) throw new EmailInputError("Invalid email attempt.");
   const claimed = await database.$transaction(async transaction => {
+    const pending = await transaction.orderEmail.findUnique({ where: { id: messageId }, select: { orderId: true } });
+    if (!pending) throw new EmailInputError("Email attempt was not found.");
+    await transaction.$queryRaw`SELECT id FROM "SalesOrder" WHERE id = ${pending.orderId}::uuid FOR UPDATE`;
     await transaction.$queryRaw`SELECT id FROM "OrderEmail" WHERE id = ${messageId}::uuid FOR UPDATE`;
     const message = await transaction.orderEmail.findUnique({ where: { id: messageId } });
     if (!message) throw new EmailInputError("Email attempt was not found.");

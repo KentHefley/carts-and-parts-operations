@@ -6,7 +6,7 @@ export async function readActivity(database: PrismaClient, options: { orderId?: 
     if (id !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error("Invalid activity identifier.");
   }
   const fetchRows = (cursor?: string) => database.orderEvent.findMany({
-      where: options.orderId ? { orderId: options.orderId } : { order: { name: { not: null } } },
+      where: options.orderId ? { orderId: options.orderId, order: { deletedAt: null } } : { order: { name: { not: null }, deletedAt: null } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 100,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       include: { actor: { select: { displayName: true, email: true } }, order: { select: { id: true, number: true, name: true } } },

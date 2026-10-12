@@ -15,7 +15,7 @@ export function orderView(order: StoredOrder): OrderView {
 export async function reserveOrder(database: PrismaClient, creatorId: string, requestKey: string) {
   if (!/^[0-9a-f-]{36}$/i.test(requestKey)) throw new Error("Invalid request identifier.");
   const existing = await database.salesOrder.findUnique({ where: { creatorId_requestKey: { creatorId, requestKey } }, include });
-  if (existing) return orderView(existing);
+  if (existing) { if (existing.deletedAt) throw new Error("This order is in Trash."); return orderView(existing); }
   try {
     return orderView(await database.salesOrder.create({ data: { creatorId, requestKey, fields: { status: "In Progress", dateEntered: "" },
       items: { create: [0, 1, 2].map(position => ({ position })) },
@@ -23,7 +23,7 @@ export async function reserveOrder(database: PrismaClient, creatorId: string, re
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const retried = await database.salesOrder.findUnique({ where: { creatorId_requestKey: { creatorId, requestKey } }, include });
-      if (retried) return orderView(retried);
+      if (retried) { if (retried.deletedAt) throw new Error("This order is in Trash."); return orderView(retried); }
     }
     throw error;
   }
@@ -72,6 +72,7 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
   return database.$transaction(async transaction => {
     await transaction.$queryRaw`SELECT id FROM "SalesOrder" WHERE id = ${request.id}::uuid FOR UPDATE`;
     const order = await transaction.salesOrder.findUniqueOrThrow({ where: { id: request.id }, include });
+    if (order.deletedAt) return { ok: false as const, message: "This order is in Trash and cannot be edited." };
     const current = orderView(order);
     const patch = { ...request.patch };
     if (request.closeoutMode === "quick") {
@@ -128,17 +129,17 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
     await transaction.orderEvent.create({ data: { orderId: order.id, actorId, changes } });
     await notifyOrderChange(transaction, order.id, actorId, addedIds, Object.keys(changes).some(key => key !== "assignments"));
     return { ok: true as const, order: orderView(await transaction.salesOrder.findUniqueOrThrow({ where: { id: order.id }, include })) };
-  });
+  }, { timeout: 30_000 });
 }
 
 export async function loadOrder(database: PrismaClient, id: string) {
-  return orderView(await database.salesOrder.findUniqueOrThrow({ where: { id }, include }));
+  return orderView(await database.salesOrder.findFirstOrThrow({ where: { id, deletedAt: null }, include }));
 }
 
 export async function listOrders(database: PrismaClient, completed: boolean) {
   const statuses = completed ? ["Complete", "Voided"] : ["Pending", "In Progress", "Expedite"];
   return database.salesOrder.findMany({
-    where: { name: { not: null }, OR: statuses.map(status => ({ fields: { path: ["status"], equals: status } })) },
+    where: { deletedAt: null, name: { not: null }, OR: statuses.map(status => ({ fields: { path: ["status"], equals: status } })) },
     orderBy: { createdAt: "desc" },
     select: { id: true, number: true, name: true, fields: true, assignments: { include: { user: { select: { email: true, displayName: true, active: true } } } } },
   });

@@ -15,6 +15,8 @@
     "admin:bootstrap:development": "tsx scripts/bootstrap-admin.ts",
     "test:access": "tsx --test tests/access-policy.test.ts",
     "test:attachments": "tsx --test tests/attachment-policy.test.ts && tsx scripts/test-attachments.ts",
+    "test:trash": "tsx scripts/test-trash.ts",
+    "cleanup:trash:development": "tsx scripts/cleanup-development-trash.ts",
     "test:orders": "tsx scripts/test-orders.ts",
     "test:email": "tsx --test tests/order-email.test.ts && tsx scripts/test-email.ts"
   },

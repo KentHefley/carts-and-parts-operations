@@ -7,7 +7,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   await requireApprovedUser();
   const { id, fileId } = await params;
   if (!validAttachmentId(id) || !validAttachmentId(fileId)) return new Response("Not found", { status: 404 });
-  const file = await getDatabase().orderAttachment.findFirst({ where: { id: fileId, orderId: id, state: "READY" } });
+  const file = await getDatabase().orderAttachment.findFirst({ where: { id: fileId, orderId: id, state: "READY", order: { deletedAt: null } } });
   if (!file) return new Response("Not found", { status: 404 });
   const range = request.headers.get("range");
   if (range && !/^bytes=\d+-\d*$/.test(range)) return new Response("Invalid range", { status: 416 });

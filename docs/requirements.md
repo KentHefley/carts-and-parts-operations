@@ -1,6 +1,8 @@
 # Carts and Parts Operations requirements
 
-October 11 attachment decision: allow PDF, JPG/JPEG, PNG and WebP files up to 20 MB each, preserving original bytes/quality. See attachments-milestone.md for the implementation and verification plan. Cloudflare account/private development storage setup is pending.
+October 11 attachment decision: allow PDF, JPG/JPEG, PNG and WebP files up to 20 MB each, preserving original bytes/quality. Kent configured private development R2 credentials and localhost upload CORS; synthetic storage checks passed. Public-access settings still require his confirmation.
+
+October 11 Trash clarification: creator/admin deletion retains the order and its files for 30 elapsed days. Only admins restore, preserving previous status and assignments and flagging inactive assignees. At expiry restoration stops; the next successful cleanup permanently removes all tracked R2 objects and detailed order data, retaining minimal identity/deletion/purge audit metadata. Storage failures must remain tracked and retryable. No early permanent-delete control is provided. See trash-milestone.md.
 
 Agreed with Kent on October 5, 2026. These are requirements, not claims of implemented features. Unresolved details are in decisions.md. Preserve every existing Monday sales-order field; inventory and map them before implementing the form.
 

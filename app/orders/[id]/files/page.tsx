@@ -13,7 +13,7 @@ export default async function FilesPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   if (!validAttachmentId(id)) notFound();
   const db = getDatabase();
-  const order = await db.salesOrder.findUnique({ where: { id }, include: { assignments: true } });
+  const order = await db.salesOrder.findFirst({ where: { id, deletedAt: null }, include: { assignments: true } });
   if (!order) notFound();
   const files = await db.orderAttachment.findMany({ where: { orderId: id, state: "READY" }, include: { uploader: { select: { displayName: true, email: true } } }, orderBy: { uploadedAt: "desc" } });
   const completed = terminalStatus((order.fields as Record<string, string>).status);

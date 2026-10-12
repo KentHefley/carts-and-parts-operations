@@ -10,7 +10,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const user = await requireApprovedUser();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const record = await getDatabase().salesOrder.findUnique({ where: { id }, select: { creatorId: true } });
+  const record = await getDatabase().salesOrder.findFirst({ where: { id, deletedAt: null }, select: { creatorId: true } });
   if (!record) notFound();
   const initial = await loadOrder(getDatabase(), id);
   const users = await getDatabase().appUser.findMany({ where: { OR: [{ active: true }, { id: { in: initial.assigneeIds } }] }, select: { id: true, email: true, displayName: true, active: true }, orderBy: [{ displayName: "asc" }, { email: "asc" }] });

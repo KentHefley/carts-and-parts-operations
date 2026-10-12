@@ -264,3 +264,11 @@ tbody tr:hover { background:var(--soft); }
 .email-confetti i { position: absolute; top: 0; width: 7px; height: 12px; opacity: 0; animation: email-celebrate 1.4s ease-out forwards; }
 @keyframes email-celebrate { 0% { opacity: 1; translate: 0 0; } 90% { opacity: 1; } 100% { opacity: 0; translate: 16px 170px; rotate: 260deg; } }
 @media (prefers-reduced-motion: reduce) { .email-confetti { display: none; } }
+
+.confirmation-dialog { position:fixed; inset:0; margin:auto; width:min(460px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; padding:26px; border:1px solid var(--line); border-radius:14px; background:var(--paper); color:var(--foreground); box-shadow:0 18px 70px #0005; }
+.confirmation-dialog::backdrop { background:#07162699; }
+.confirmation-dialog h2 { margin:0 0 12px; font-size:21px; }
+.confirmation-dialog p { margin:0 0 20px; line-height:1.6; overflow-wrap:anywhere; }
+.confirmation-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
+.confirmation-dialog button:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+.confirmation-dialog .danger-button { background:#b42318; color:white; border-color:#b42318; }

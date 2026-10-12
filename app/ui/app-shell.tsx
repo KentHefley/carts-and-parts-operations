@@ -28,7 +28,7 @@ export function AppShell({ title, active, admin, initialTheme, initialCollapsed,
     const next = theme === "light" ? "dark" : "light";
     setTheme(next); document.documentElement.dataset.theme = next; preference("cp-theme-v1", next);
   }
-  const navItems = admin ? [...navigation, { label: "Reports", icon: "report" }, { label: "Administration", icon: "settings" }] : navigation;
+  const navItems = admin ? [...navigation, { label: "Reports", icon: "report" }, { label: "Administration", href: "/administration", icon: "settings" }] : navigation;
   return <div onKeyDown={event => { if (event.key === "Escape" && mobileOpen) { setMobileOpen(false); document.querySelector<HTMLButtonElement>(".mobile-nav-toggle")?.focus(); } }} className={`app-shell${collapsed ? " sidebar-collapsed" : ""}${mobileOpen ? " mobile-nav-open" : ""}`}>
     <a className="skip-link" href="#workspace-content">Skip to content</a>
     <aside className="app-sidebar" id="app-navigation">

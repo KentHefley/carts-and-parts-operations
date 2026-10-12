@@ -89,6 +89,8 @@ Use Add Sales Order Field as the navigation button label for field configuration
 - Dropdown choices (Division, Job Type, Terms, Price Level and other mapped choices): add/change/deactivate, preserve existing values.
 - Calendar categories: add/rename/deactivate.
 - Trash: deletion time, expiry, restore within 30 days, minimal retained audit after purge.
+
+October 11 implementation: Administration links to admin-only Trash, showing SO Number, Name, previous status, assignments (including inactive flags), file count, deletion and expiration timestamps in America/Chicago. Trash is paginated in groups of 50. Restore Order appears only before expiration; expired/purging rows show cleanup pending. Clean Expired Trash retries eligible permanent cleanup without deleting unexpired orders. Creator/admin sees Delete Sales Order below the order form; save pending changes before deleting. Order tabs are Order Details, Files, Activity Log while Updates remains unimplemented.
 - Price book replacement may be accessed from its cards.
 Detailed administration layouts and how employees map to user accounts remain to be designed.
 
@@ -107,3 +109,5 @@ October 10: Same as Invoice checkbox and explanatory text appear at the top of B
 October 10 placement refinement: Store Same as Invoice appears immediately before Store Name, spanning the grid width so Store fields begin together on the next row. Copy behavior is unchanged.
 
 October 10: Successful SO email toast/confetti dismisses after five seconds or when clicking the order form. Error toasts retain manual dismissal.
+
+October 11: Order deletion, file deletion, expired Trash cleanup and Reload Saved Values use themed in-app confirmation dialogs. Cancel receives initial focus; Escape cancels and focus returns to the trigger. Pending actions disable controls and prevent dismissal. Confirmed Reload Saved Values skips the additional browser unload warning.

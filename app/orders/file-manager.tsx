@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { attachmentInput } from "../../lib/attachment-policy";
 import { startFile, completeFile, removeFile, retryFileCleanup } from "./file-actions";
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
 
 type FileRow = { id: string; filename: string; size: number; contentType: string; uploader: string; uploadedAt: string };
 const fileUrl = (orderId: string, file: FileRow, download = false) => `/orders/${orderId}/files/${file.id}${download ? "?download=1" : ""}`;
@@ -26,6 +27,7 @@ export function FileManager({ orderId, files, canManage, admin }: { orderId: str
   const [progress, setProgress] = useState(0);
   const [pending, setPending] = useState<string | null>(null);
   const [preview, setPreview] = useState<FileRow | null>(null);
+  const [deleting, setDeleting] = useState<FileRow | null>(null);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (working.current) event.preventDefault(); };
     window.addEventListener("beforeunload", warn);
@@ -59,11 +61,11 @@ export function FileManager({ orderId, files, canManage, admin }: { orderId: str
     finally { working.current = false; setBusy(false); }
   }
   async function remove(file: FileRow) {
-    if (working.current || !window.confirm(`Permanently delete ${file.filename}? This cannot be restored.`)) return;
+    if (working.current || !canManage) return;
     working.current = true; setBusy(true);
     try { const result = await removeFile(orderId, file.id); setMessage(result.message); if (result.ok) router.refresh(); }
     catch { setMessage("Deletion result is unknown. Refresh the file list before retrying."); }
-    finally { working.current = false; setBusy(false); }
+    finally { working.current = false; setBusy(false); setDeleting(null); }
   }
   return <section className="form-section file-manager"><h2>Order Files</h2>
     {canManage ? <div className="file-drop-zone" onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (event.dataTransfer.files.length > 1) setMessage("Please add one file at a time."); else void upload(event.dataTransfer.files[0]); }}>
@@ -75,9 +77,10 @@ export function FileManager({ orderId, files, canManage, admin }: { orderId: str
     {pending && !busy && <button type="button" onClick={async () => { working.current = true; setBusy(true); try { await verify(pending); } catch (error) { setMessage(error instanceof Error ? error.message : "Verification failed."); } finally { working.current = false; setBusy(false); } }}>Retry upload verification</button>}
     {!files.length ? <p>No files uploaded.</p> : <ul className="order-files">{files.map(file => <li key={file.id}>
       <div><strong>{file.filename}</strong><p>{(file.size / 1_000_000).toFixed(2)} MB · {file.uploader} · {new Date(file.uploadedAt).toLocaleString()}</p></div>
-      <div className="file-actions"><button type="button" onClick={() => setPreview(file)}>View</button><a href={fileUrl(orderId, file, true)}>Download</a>{canManage && <button type="button" disabled={busy} onClick={() => void remove(file)}>Delete</button>}</div>
+      <div className="file-actions"><button type="button" onClick={() => setPreview(file)}>View</button><a href={fileUrl(orderId, file, true)}>Download</a>{canManage && <button type="button" disabled={busy} onClick={() => setDeleting(file)}>Delete</button>}</div>
     </li>)}</ul>}
     {admin && <button type="button" disabled={busy} onClick={async () => { working.current = true; setBusy(true); try { const result = await retryFileCleanup(); setMessage(result.message); router.refresh(); } catch { setMessage("Cleanup failed. Please retry."); } finally { working.current = false; setBusy(false); } }}>Retry pending file cleanup</button>}
     {preview && <FilePreview orderId={orderId} file={preview} onClose={() => setPreview(null)} />}
+    {deleting && <ConfirmationDialog title="Permanently delete file?" description={`${deleting.filename} will be permanently deleted. This file cannot be restored.`} confirmLabel="Delete File" busy={busy} onCancel={() => setDeleting(null)} onConfirm={() => void remove(deleting)} />}
   </section>;
 }

@@ -1,6 +1,8 @@
 # Decisions and unresolved details
 
-October 11: Kent approved attachment types PDF, JPG/JPEG, PNG and WebP, with a 20 MB per-file limit and original quality retained. He has neither a Cloudflare account nor an R2 bucket yet. Private development storage setup is next; no billing activation or purchase performed. Upload expiration/cleanup execution details remain to be defined during implementation.
+October 11: Kent configured Cloudflare and private development R2 storage, restricted object read/write credentials, and localhost PUT CORS. The approved attachment types are PDF, JPG/JPEG, PNG and WebP, up to 20 MB per file with original quality retained. Public Development URL and Custom Domains still require confirmation as disabled.
+
+October 11 Trash: Kent approved implementing the previously agreed 30-day admin restoration and subsequent whole-order/R2 cleanup. Minimal tombstones retain stable identity/number, creator reference and deletion/purge timestamps; detailed fields, items, email snapshots, files, notifications and history are removed after storage cleanup succeeds. Retention duration for minimal tombstones remains undecided. Deleted-order notification policy remains unresolved; deletion/restoration create history events but no new bell alerts. Existing notifications are hidden during Trash and resume after restoration. Daily hosted cleanup is configured in source but is not running locally and requires CRON_SECRET plus an authorized Vercel deployment. No live database/storage target is enabled.
 
 ## Agreed decisions — October 5, 2026
 

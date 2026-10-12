@@ -41,6 +41,11 @@ model SalesOrder {
   fields     Json @default("{}")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  deletedAt DateTime?
+  deletedById String? @db.Uuid
+  purgeAfter DateTime?
+  purgingAt DateTime?
+  purgedAt DateTime?
   items      OrderItem[]
   events     OrderEvent[]
   assignments OrderAssignment[]
@@ -48,6 +53,7 @@ model SalesOrder {
   emails OrderEmail[]
   attachments OrderAttachment[]
   @@unique([creatorId, requestKey])
+  @@index([deletedAt, purgeAfter, purgedAt])
 }
 
 model OrderItem {
