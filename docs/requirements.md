@@ -1,5 +1,7 @@
 # Carts and Parts Operations requirements
 
+October 11 attachment decision: allow PDF, JPG/JPEG, PNG and WebP files up to 20 MB each, preserving original bytes/quality. See attachments-milestone.md for the implementation and verification plan. Cloudflare account/private development storage setup is pending.
+
 Agreed with Kent on October 5, 2026. These are requirements, not claims of implemented features. Unresolved details are in decisions.md. Preserve every existing Monday sales-order field; inventory and map them before implementing the form.
 
 The reference-based inventory is in `field-inventory.md`. It distinguishes verified labels from plan-only fields and lists remaining board checks. Kent's latest clarification supersedes the earlier AM/time interpretation: AM Description is a manually entered text field in the labor inputs; its abbreviation need not be resolved to preserve it. Focus field review on source types, input controls and confirmed calculations, without assigning new behavior from labels. NTE means Not to Exceed; no enforcement rule is agreed. Do not infer freight/NTE calculations.

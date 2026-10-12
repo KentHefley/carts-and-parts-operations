@@ -28,6 +28,7 @@ model AppUser {
   notifications Notification[] @relation("Recipient")
   sentNotifications Notification[] @relation("Actor")
   emails OrderEmail[]
+  attachments OrderAttachment[]
 }
 
 model SalesOrder {
@@ -45,6 +46,7 @@ model SalesOrder {
   assignments OrderAssignment[]
   notifications Notification[]
   emails OrderEmail[]
+  attachments OrderAttachment[]
   @@unique([creatorId, requestKey])
 }
 
@@ -110,4 +112,29 @@ model OrderEmail {
   acceptedAt DateTime?
   @@unique([orderId, actorId, requestKey])
   @@index([orderId, createdAt])
+}
+
+model OrderAttachment {
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @db.Uuid
+  uploaderId String @db.Uuid
+  requestKey String @db.Uuid
+  order SalesOrder @relation(fields: [orderId], references: [id])
+  uploader AppUser @relation(fields: [uploaderId], references: [id])
+  filename String
+  contentType String
+  size Int
+  stagingKey String @unique
+  storageKey String @unique
+  state String @default("PENDING")
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  uploadedAt DateTime?
+  deletedAt DateTime?
+  deletedById String? @db.Uuid
+  stagingCleanedAt DateTime?
+  objectCleanedAt DateTime?
+  @@unique([orderId, uploaderId, requestKey])
+  @@index([orderId, state, uploadedAt])
+  @@index([state, expiresAt])
 }

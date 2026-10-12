@@ -1,5 +1,7 @@
 # Decisions and unresolved details
 
+October 11: Kent approved attachment types PDF, JPG/JPEG, PNG and WebP, with a 20 MB per-file limit and original quality retained. He has neither a Cloudflare account nor an R2 bucket yet. Private development storage setup is next; no billing activation or purchase performed. Upload expiration/cleanup execution details remain to be defined during implementation.
+
 ## Agreed decisions — October 5, 2026
 
 | Decision | Reason / effect |
