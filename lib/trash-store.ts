@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from "../generated/prisma/client";
 import type { AttachmentStorage } from "./attachment-storage";
 import { validAttachmentId } from "./attachment-policy";
+import { terminalStatus } from "./order-status";
 
 const retention = 30 * 24 * 60 * 60 * 1000;
 async function lock(tx: Prisma.TransactionClient, id: string) {
@@ -14,10 +15,11 @@ async function actor(tx: Prisma.TransactionClient, id: string, admin = false) {
   return user;
 }
 
-export async function trashOrder(db: PrismaClient, actorId: string, id: string) {
+export async function trashOrder(db: PrismaClient, actorId: string, id: string, terminalAdminOnly = false) {
   return db.$transaction(async tx => {
     const order = await lock(tx, id);
     const user = await actor(tx, actorId);
+    if (terminalAdminOnly && terminalStatus((order.fields as Record<string, string>).status) && user.role !== "ADMIN") throw new Error("Only admins can delete completed orders from the list.");
     if (user.role !== "ADMIN" && order.creatorId !== actorId) throw new Error("Only the creator or an admin can delete this order.");
     if (order.deletedAt) return; // Repeated deletion must not extend retention.
     if (await tx.orderEmail.count({ where: { orderId: id, state: "SENDING", lastAttemptAt: { gt: new Date(Date.now() - 120_000) } } })) throw new Error("An SO email is being sent. Wait two minutes before deleting.");

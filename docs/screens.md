@@ -18,6 +18,10 @@ Landing screen after sign-in. Navigation cards for the five primary sections; ad
 
 ## Order lists
 
+Latest October 12 correction: Completed Sales Orders hides all selection checkboxes/actions from regular users. Admins see selection, Move Selected to Trash and Clear Selection, with no Copy Selected. Active-list controls remain unchanged. Result dismissal is labeled Dismiss.
+
+October 12 implementation: a checkbox column appears on active and completed lists. The header checkbox selects current displayed results and shows partial selection. Selected rows reveal a toolbar with count, Copy Selected, Move Selected to Trash and Clear Selection. Mixed-ownership selections disable Trash for non-admins with explanatory text. Filter changes clear selection. Actions run sequentially with progress and per-order results; copies link to new numbers. Successful items leave selection; failed items remain for retry. Deletion uses the shared app confirmation and retains order files for 30 days.
+
 Sales Orders contains active statuses; Completed Sales Orders contains Complete/Voided.
 Columns: SO Number, Name, Status, Division, Job Type, Scheduled Job Date, Assigned To.
 Every result row displays its order values in all seven columns. Show an em dash for blank optional values; do not leave ambiguous empty cells. SO Number is visibly displayed and can open the order.
@@ -29,6 +33,8 @@ Sortable column headings toggle ascending/descending. Active default: newest Dat
 Compact table; no inline field editing. Click order to open wide slide-out form on larger screens; full-screen form on mobile. Direct order navigation/link behavior remains to be specified.
 
 ## Order form
+
+October 12 implementation: Copy Order appears beside Save now for all approved users on active and completed orders. It saves pending changes, checks the source snapshot, creates the copy, and opens its form. While copying, form inputs and competing actions are disabled; errors are shown in the app. Navigation mounts fresh form state for the new order.
 
 Tabs: Order Details, Files, Updates, Activity Log.
 
@@ -111,3 +117,5 @@ October 10 placement refinement: Store Same as Invoice appears immediately befor
 October 10: Successful SO email toast/confetti dismisses after five seconds or when clicking the order form. Error toasts retain manual dismissal.
 
 October 11: Order deletion, file deletion, expired Trash cleanup and Reload Saved Values use themed in-app confirmation dialogs. Cancel receives initial focus; Escape cancels and focus returns to the trigger. Pending actions disable controls and prevent dismissal. Confirmed Reload Saved Values skips the additional browser unload warning.
+
+Price Books implementation (October 12): /price-books now provides the approved tabs and original-PDF overlay. Admin controls include edition month/year, upload/replace, pending-upload verification and pending-storage cleanup. Regular users receive View Book and Download PDF only. Upload timestamp remains automatic and distinct from edition.

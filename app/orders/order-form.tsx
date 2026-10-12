@@ -1,9 +1,10 @@
 "use client";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { orderFields } from "../../lib/order-fields";
 import { AssignableUser, ItemValue, OrderView } from "../../lib/order-types";
-import { persistOrder } from "./actions";
+import { duplicateOrder, persistOrder } from "./actions";
 import { missingCloseout, orderStatuses, terminalStatus } from "../../lib/order-status";
 import { DateField } from "./date-field";
 import { OrderTabs } from "./order-tabs";
@@ -29,6 +30,7 @@ function revealCloseout(fields: Record<string, string>) {
   input?.focus({ preventScroll: true });
 }
 export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId }: { initial: OrderView; users: AssignableUser[]; canSendEmail?: boolean; pendingEmailId?: string }) {
+  const router = useRouter();
   const [fields, setFields] = useState(initial.fields);
   const [sameAsInvoice, setSameAsInvoice] = useState(false);
   const [items, setItems] = useState(initial.items);
@@ -40,6 +42,10 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
   const [baseline, setBaseline] = useState(initial);
   const [closeoutError, setCloseoutError] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
+  const [copyBusy, setCopyBusy] = useState(false);
+  const [copyError, setCopyError] = useState("");
+  const copyKey = useRef<string | undefined>(undefined);
+  const copying = useRef(false);
   const [emailId, setEmailId] = useState(pendingEmailId);
   const [toast, setToast] = useState<{ message: string; success: boolean } | null>(null);
   const dismissEmailToast = useCallback(() => setToast(null), []);
@@ -85,7 +91,7 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
   }, [initial.id]);
 
   async function sendEmail() {
-    if (sendingEmail.current || saving.current || blocked.current) return;
+    if (copying.current || sendingEmail.current || saving.current || blocked.current) return;
     sendingEmail.current = true; setEmailBusy(true); setToast(null);
     try {
       latest.current = { fields, items, assigneeIds };
@@ -97,6 +103,22 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
       setToast({ message: result.message, success: result.ok });
     } catch { setToast({ message: "The email result is unknown. Retry this attempt; your order remains saved.", success: false }); }
     finally { sendingEmail.current = false; setEmailBusy(false); }
+  }
+
+  async function copy() {
+    if (copying.current || sendingEmail.current || saving.current || blocked.current) return;
+    copying.current = true; setCopyBusy(true); setCopyError("");
+    try {
+      latest.current = { fields, items, assigneeIds };
+      if (!await save()) { setCopyError("Save the order and resolve any errors before copying."); return; }
+      copyKey.current ??= crypto.randomUUID();
+      const result = await duplicateOrder(saved.current, copyKey.current);
+      if (!result.ok) { setCopyError(result.message); return; }
+      // The form is locked while saving/copying, so navigation loses no input.
+      discardConfirmed.current = true;
+      router.push(`/orders/${result.order.id}`);
+    } catch { setCopyError("The copy result is unknown. Retry Copy Order to recover this same attempt."); }
+    finally { copying.current = false; setCopyBusy(false); }
   }
 
   useEffect(() => {
@@ -156,12 +178,13 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
         }
       }}>{terminalStatus(baseline.fields.status) ? "Completed Sales Orders" : "Sales Orders"}</Link>
     </header>
-    <div className="save-toolbar"><OrderTabs orderId={initial.id} current="details" /><span aria-live="polite" role="status">{feedback}</span><button disabled={busy || conflict || emailBusy} onClick={() => void save()}>Save now</button></div>
+    <div className="save-toolbar"><OrderTabs orderId={initial.id} current="details" /><span aria-live="polite" role="status">{copyBusy ? "Copying order…" : feedback}</span><button type="button" disabled={busy || conflict || emailBusy || copyBusy} onClick={() => void copy()}>{copyBusy ? "Copying…" : "Copy Order"}</button><button disabled={busy || conflict || emailBusy || copyBusy} onClick={() => void save()}>Save now</button></div>
+    {copyError && <div className="save-alert" role="alert"><p>{copyError}</p><button type="button" onClick={() => setCopyError("")}>Dismiss</button></div>}
     {toast && <EmailToast {...toast} onClose={dismissEmailToast} />}
     {conflict && <div className="save-alert" role="alert"><p>{feedback}</p><button onClick={() => { blocked.current = false; setConflict(false); void save(); }}>Retry save</button><button onClick={() => setReloadOpen(true)}>Reload saved values</button></div>}
     {reloadOpen && <ConfirmationDialog title="Reload saved values?" description="Your unsaved input will be discarded and replaced with the saved order values." confirmLabel="Reload Saved Values" onCancel={() => setReloadOpen(false)} onConfirm={() => { discardConfirmed.current = true; window.location.reload(); }} />}
     <form onClick={() => { if (toast?.success) dismissEmailToast(); }} onSubmit={event => { event.preventDefault(); void save(); }}>
-      <fieldset className="email-form-lock" disabled={emailBusy}>
+      <fieldset className="email-form-lock" disabled={emailBusy || copyBusy}>
       {sections.map(section => <details key={section} id={section === "Completion" ? "completion-section" : undefined} className="form-section" open={section !== "Service and Labor"}><summary>{section}</summary><div className="field-grid">
         {section === "Order Overview" && <>
           <label>Name <span aria-label="required">*</span><input name="name" value={fields.name ?? ""} onChange={event => update("name", event.target.value)} required /></label>
@@ -205,6 +228,6 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
       </details>)}
       </fieldset>
     </form>
-    {canSendEmail && <DeleteOrderButton orderId={initial.id} disabled={dirty || busy || conflict || emailBusy} />}
+    {canSendEmail && <DeleteOrderButton orderId={initial.id} disabled={dirty || busy || conflict || emailBusy || copyBusy} />}
   </main>;
 }

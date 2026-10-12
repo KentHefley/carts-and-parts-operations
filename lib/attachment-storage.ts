@@ -19,7 +19,7 @@ export function attachmentStorage() {
       await client.send(new CopyObjectCommand({ Bucket: bucket, Key: key, CopySource: `${bucket}/${staging}`, CopySourceIfMatch: etag, MetadataDirective: "REPLACE", ContentType: type, CacheControl: "private, no-store" }), { abortSignal: AbortSignal.timeout(15_000) });
     },
     async remove(key: string) { await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }), { abortSignal: AbortSignal.timeout(15_000) }); },
-    async read(key: string, range?: string) { return client.send(new GetObjectCommand({ Bucket: bucket, Key: key, ...(range ? { Range: range } : {}) }), { abortSignal: AbortSignal.timeout(15_000) }); },
+    async read(key: string, range?: string, etag?: string) { return client.send(new GetObjectCommand({ Bucket: bucket, Key: key, ...(range ? { Range: range } : {}), ...(etag ? { IfMatch: etag } : {}) }), { abortSignal: AbortSignal.timeout(15_000) }); },
   };
 }
 export type AttachmentStorage = ReturnType<typeof attachmentStorage>;

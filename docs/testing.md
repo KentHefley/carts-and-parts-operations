@@ -1,5 +1,19 @@
 # Development verification
 
+Latest October 12 list-policy check: regular users see no completed-list selection controls; admins can select and Trash but cannot bulk copy. Active-list copy/Trash controls and Dismiss label were verified in the isolated actual-component browser fixture. `test:selection` now verifies completed/voided copy rejection for users/admins and completed deletion rejection for creators unless admin. Prior completed-list copying checklists are superseded; opened-order controls are unchanged.
+
+## October 12 order-list selection
+
+`npm run test:selection` creates and cleans only its own guarded development fixtures. Checks copying/retry, terminal source, partial outcomes, creator/admin/inactive permissions, Trash retention/retry and invalid actions. Actual OrderList synthetic browser checks passed for selection, filtering, permissions, busy controls, partial failures/retry and completed-order confirmation.
+
+Employee review: on each list select one order and several orders; verify count and Clear Selection. Filter by Name/SO Number and select all; confirm only visible results are selected. Copy and open resulting SO numbers to check resets. Move test orders to Trash, cancel once, then confirm and restore as admin. As a regular employee, select another creator's order and verify Copy is available while Trash is disabled; select only your own to delete. In-order Copy/Delete must remain available under their existing permissions.
+
+## October 12 Copy Order
+
+Automated: `npm run test:copies` uses guarded development credentials and creates/removes only its own synthetic records. Covers reset/preserved values, items, creator, excluded relationships, source integrity, repeated concurrent requests, stale sources, inactive users and Trash. Isolated OrderForm browser checks and focused lint/build/runtime checks passed; see progress.md.
+
+Employee review: open an active order, edit a field and click Copy Order before autosave. Confirm a new SO number, your name as Submitted By, today's Date Entered and In Progress status. Check Division, Purchase Order, Scheduled Job Date, assignments and all closeout/void fields are blank; other details/items remain. Verify Files is empty and Activity Log contains only the new copy event. Return to the original and verify it is intact. Repeat with a completed order and a regular approved employee account.
+
 ## October 8 shared date picker
 
 Two date-only tests passed for leap-day/DST-boundary round trips, display formatting, blanks and impossible dates. Lint passed (one existing skill warning), production build/TypeScript passed, and runtime compilation returned no issues. An isolated local fixture mounted the actual DateField component with production CSS and no application data/authentication: mouse selected 10/09/2026 and yielded 2026-10-09, Enter/ArrowRight/Enter selected 10/10/2026, Escape closed the popover, and Clear date yielded blank. Accessibility scan on the popover found zero violations, with weekday contrast needing manual review. Browser fixture artifacts were removed. This verifies the component, not authenticated app persistence or every browser engine.
@@ -131,3 +145,8 @@ Kent's authenticated employee check:
 5. Confirm a noncreator regular user cannot delete the order or open Administration/Trash.
 
 Do not shorten retention on company orders for testing. Expiration and R2 removal are tested only through synthetic fixtures. Hosted daily scheduling remains unverified until configured and deployed with authorization; localhost has manual admin cleanup.
+
+Price Books (October 12): npm run test:price-books and npm run test:price-books -- --r2 passed with synthetic two-page PDFs and temporary users; fixtures and object bytes removed afterwards. These lifecycle tests refuse databases with configured Price Books to avoid modifying company books. TypeScript, focused ESLint, production build and Next runtime probes passed. Actual UI components were browser-tested in an isolated synthetic fixture; authenticated full-app review remains.
+Employee/admin review: Open Price Books, upload the matching original PDF under each tab as admin, set edition month/year, then View Book. Check page selector, Previous/Next, zoom, Close/Escape, download quality and tab switching. As a regular approved user, verify view/download and absence of upload/edition/cleanup controls. Try an invalid PDF replacement and confirm the current book remains available. Cleanup is manual in localhost; retry after 15 minutes for expired staging uploads.
+
+Mobile Price Books follow-up: use View Book at 320px/390px phone widths and tablet widths. Check loading completion, Next/Previous, zoom, scrolling within PDF, Close/Escape, theme and admin file-input widths. Phone-emulated geometry was sampled repeatedly and remained stable after the layout fix. This does not replace testing on physical iOS/Android devices. Preview screenshots use actual UI components, uploaded metadata and local reference PDFs, with account/notification controls stubbed. Existing books were not changed.

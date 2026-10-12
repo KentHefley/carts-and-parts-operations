@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 /generated/prisma/
+/public/pdfjs/
 /.pnp
 .pnp.*
 .yarn/*

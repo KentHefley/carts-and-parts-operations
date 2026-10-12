@@ -17,3 +17,5 @@ Retained tombstones hold only identity/number, creator reference, request key fo
 ## Attachment staging
 
 Individual-file cleanup remains an admin retry action. Before unattended pilot operation, configure a staging-prefix lifecycle backstop and scheduled pending-upload cleanup. Preserve final `development/orders/` objects until their explicit deletion or whole-order purge; never apply staging expiration to the whole bucket. Confirm Public Development URL remains disabled and no Custom Domain is connected.
+
+Price Books: deploy migration 20261012180000_price_books only to the verified target. PDF.js requires Node 22.13+ or 24+; local verification used 24.16.0. prebuild copies licensed PDF renderer/worker/font/WASM assets from the pinned dependency into ignored public/pdfjs. Keep R2 private and add the authorized deployment origin to upload CORS. Price Book staging/replaced cleanup currently runs after publication or through an admin retry; schedule cleanup before live operation. No live deployment has been performed. Review the Prisma/ESLint dependency advisories recorded in price-books-milestone.md before release.

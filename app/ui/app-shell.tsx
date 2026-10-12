@@ -9,7 +9,7 @@ const navigation: { label: string; href?: string; icon: string }[] = [
   { label: "Dashboard", href: "/", icon: "home" },
   { label: "Sales Orders", href: "/sales-orders", icon: "orders" },
   { label: "Completed Sales Orders", href: "/completed-orders", icon: "check" },
-  { label: "Price Books", icon: "book" },
+  { label: "Price Books", href: "/price-books", icon: "book" },
   { label: "Calendar", icon: "calendar" },
   { label: "Time Off/Birthday Calendar", icon: "people" },
 ];

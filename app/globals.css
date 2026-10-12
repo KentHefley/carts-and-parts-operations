@@ -70,6 +70,15 @@ button { cursor:pointer; border:1px solid #9ca3af; border-radius:6px; padding:8p
 button:disabled { cursor:wait; opacity:.55; }
 a { color:#3b82f6; text-decoration:underline; }
 .primary-button { background:#fbbf24; color:#172033; border-color:#fbbf24; font-weight:700; }
+.selection-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:16px; margin-bottom:16px; border:1px solid var(--line); border-radius:8px; background:var(--selected); }
+.selection-toolbar p,.selection-toolbar small { flex-basis:100%; margin:0; }
+.selection-toolbar small,.selection-progress { color:var(--muted); }
+.selection-results { border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; background:var(--paper); }
+.selection-results h2 { font-size:16px; margin-top:0; }
+.selection-results li { margin-bottom:8px; overflow-wrap:anywhere; }
+.selection-cell { width:44px; text-align:center; }
+.selection-cell input[type="checkbox"] { width:18px; height:18px; accent-color:var(--blue); cursor:pointer; }
+tr[data-selected] { background:var(--selected); }
 .list-heading, .order-header, .save-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .list-filters, .field-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; padding:20px 0; }
 .name-filter { grid-column:1/-1; }
@@ -272,3 +281,39 @@ tbody tr:hover { background:var(--soft); }
 .confirmation-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
 .confirmation-dialog button:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
 .confirmation-dialog .danger-button { background:#b42318; color:white; border-color:#b42318; }
+
+/* Price books and original-quality PDF viewer. */
+.book-tabs, .book-actions, .pdf-toolbar { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+.price-books { padding:28px; max-width:1400px; margin:0 auto; min-width:0; }
+.book-tabs { margin-bottom:1.5rem; }
+.book-tabs button { border-bottom:4px solid transparent; }
+.book-tabs button[aria-selected="true"] { border-bottom-color:var(--blue); background:var(--selected); color:var(--blue); }
+.book-panel, .book-admin { padding:1.5rem; border:1px solid var(--line); border-radius:12px; overflow-wrap:anywhere; background:var(--paper); }
+.book-panel h2 { font-size:20px; font-weight:650; margin:0 0 12px; }
+.book-panel p { margin:8px 0; }
+.book-admin { margin-top:2rem; }
+.book-admin fieldset { border:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:1rem; }
+.book-admin label { display:flex; flex-direction:column; gap:.5rem; min-width:0; max-width:100%; }
+.book-admin fieldset p { flex-basis:100%; }
+.pdf-dialog { margin:auto; box-sizing:border-box; width:min(1200px, 96vw); height:94svh; max-width:96vw; max-height:94svh; padding:1rem; border:1px solid var(--line); border-radius:12px; background:var(--background); color:var(--foreground); overflow:hidden; }
+.pdf-dialog[open] { display:flex; flex-direction:column; }
+.pdf-dialog::backdrop { background:#081728b8; }
+.pdf-dialog header { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-shrink:0; }
+.pdf-dialog header h2 { min-width:0; }
+.pdf-dialog header button { flex-shrink:0; }
+.pdf-toolbar { margin:1rem 0 .5rem; flex-shrink:0; }
+.pdf-toolbar input { width:5rem; }
+.pdf-status { flex-shrink:0; min-height:1.5em; margin-bottom:.5rem; font-size:12px; }
+.pdf-status p { margin:0; }
+.pdf-pages { overflow:auto; flex:1 1 0; min-height:0; min-width:0; scrollbar-gutter:stable; background:#626a75; padding:16px; overscroll-behavior:contain; }
+.pdf-pages canvas { display:block; background:white; margin:0 auto; }
+@media(max-width:600px) {
+  .price-books { padding:16px; }
+  .book-panel,.book-admin { padding:16px; }
+  .pdf-dialog { padding:12px; }
+  .pdf-dialog header h2 { font-size:17px; }
+  .pdf-toolbar { gap:8px; }
+  .pdf-toolbar button { padding:8px; }
+  .pdf-toolbar input { width:4rem; }
+  .pdf-pages { padding:8px; }
+}

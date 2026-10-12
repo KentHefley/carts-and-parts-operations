@@ -30,6 +30,44 @@ export async function reserveOrder(database: PrismaClient, creatorId: string, re
 }
 
 class InputError extends Error {}
+
+export async function copyOrder(database: PrismaClient, actorId: string, expected: OrderView, requestKey: string, activeOnly = false) {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!expected || !uuid.test(expected.id) || typeof requestKey !== "string" || !uuid.test(requestKey)) return { ok: false as const, message: "Invalid copy request." };
+  return database.$transaction(async transaction => {
+    // Serialize repeated attempts from this user without allocating extra numbers.
+    await transaction.$queryRaw`SELECT id FROM "AppUser" WHERE id = ${actorId}::uuid FOR UPDATE`;
+    const actor = await transaction.appUser.findUnique({ where: { id: actorId } });
+    if (!actor?.active) return { ok: false as const, message: "Active approved access is required to copy an order." };
+    await transaction.$queryRaw`SELECT id FROM "SalesOrder" WHERE id = ${expected.id}::uuid FOR UPDATE`;
+    const source = await transaction.salesOrder.findUnique({ where: { id: expected.id }, include });
+    if (!source || source.deletedAt || !source.name?.trim()) return { ok: false as const, message: "Only a saved order outside Trash can be copied." };
+    const current = orderView(source);
+    if (activeOnly && terminalStatus(current.fields.status)) return { ok: false as const, message: "Completed orders cannot be copied from the order list." };
+    const event = `Copied from ${current.number}`;
+    const existing = await transaction.salesOrder.findUnique({ where: { creatorId_requestKey: { creatorId: actorId, requestKey } }, include });
+    if (existing) {
+      const creation = await transaction.orderEvent.findFirst({ where: { orderId: existing.id, changes: { path: ["event"], equals: event } } });
+      if (existing.deletedAt || !creation) return { ok: false as const, message: "This copy attempt is no longer available. Reload the order before starting another copy." };
+      return { ok: true as const, order: orderView(existing) };
+    }
+    const sameFields = (left: Record<string, string>, right: Record<string, string>) => Object.keys({ ...left, ...right }).every(key => (left[key] ?? "") === (right[key] ?? ""));
+    if (!expected.fields || !sameFields(current.fields, expected.fields) || JSON.stringify(current.items) !== JSON.stringify(expected.items) || JSON.stringify(current.assigneeIds) !== JSON.stringify(expected.assigneeIds)) {
+      return { ok: false as const, message: "This order changed before it could be copied. Reload saved values, review the changes, and try again." };
+    }
+    const { name, ...fields } = current.fields;
+    for (const key of ["division__1", "text_28__1", "start_job_date__1", "text_79__1", "closed_out_date4__1", "voidReason", ...protectedStatusFields]) fields[key] = "";
+    fields.status = "In Progress";
+    fields.dateEntered = chicagoDate();
+    const created = await transaction.salesOrder.create({ data: {
+      creatorId: actorId, requestKey, name, fields,
+      items: { create: source.items.map(item => ({ position: item.position, description: item.description, quantity: item.quantity, unitPrice: item.unitPrice })) },
+      events: { create: { actorId, changes: { event } } },
+    }, include });
+    return { ok: true as const, order: orderView(created) };
+  }, { timeout: 30_000 });
+}
+
 function validateItems(items: ItemValue[]) {
   if (!Array.isArray(items) || items.length < 3 || items.length > 200) throw new InputError("Use 3–200 item rows.");
   for (const item of items) {
@@ -141,6 +179,6 @@ export async function listOrders(database: PrismaClient, completed: boolean) {
   return database.salesOrder.findMany({
     where: { deletedAt: null, name: { not: null }, OR: statuses.map(status => ({ fields: { path: ["status"], equals: status } })) },
     orderBy: { createdAt: "desc" },
-    select: { id: true, number: true, name: true, fields: true, assignments: { include: { user: { select: { email: true, displayName: true, active: true } } } } },
+    select: { id: true, number: true, name: true, fields: true, creatorId: true, assignments: { include: { user: { select: { email: true, displayName: true, active: true } } } } },
   });
 }

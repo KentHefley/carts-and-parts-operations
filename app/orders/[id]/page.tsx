@@ -16,5 +16,5 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const users = await getDatabase().appUser.findMany({ where: { OR: [{ active: true }, { id: { in: initial.assigneeIds } }] }, select: { id: true, email: true, displayName: true, active: true }, orderBy: [{ displayName: "asc" }, { email: "asc" }] });
   const canSendEmail = user.role === "ADMIN" || record.creatorId === user.id;
   const pending = canSendEmail ? await getDatabase().orderEmail.findFirst({ where: { orderId: id, state: { not: "ACCEPTED" } }, select: { id: true }, orderBy: { createdAt: "desc" } }) : null;
-  return <AuthenticatedShell title="Sales Order" active={terminalStatus(initial.fields.status) ? "Completed Sales Orders" : "Sales Orders"} admin={user.role === "ADMIN"}><OrderForm initial={initial} users={users} canSendEmail={canSendEmail} pendingEmailId={pending?.id} /></AuthenticatedShell>;
+  return <AuthenticatedShell title="Sales Order" active={terminalStatus(initial.fields.status) ? "Completed Sales Orders" : "Sales Orders"} admin={user.role === "ADMIN"}><OrderForm key={initial.id} initial={initial} users={users} canSendEmail={canSendEmail} pendingEmailId={pending?.id} /></AuthenticatedShell>;
 }

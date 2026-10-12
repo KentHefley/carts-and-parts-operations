@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "prisma generate",
+    "predev": "node scripts/copy-pdf-worker.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs && prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -18,7 +19,10 @@
     "test:trash": "tsx scripts/test-trash.ts",
     "cleanup:trash:development": "tsx scripts/cleanup-development-trash.ts",
     "test:orders": "tsx scripts/test-orders.ts",
-    "test:email": "tsx --test tests/order-email.test.ts && tsx scripts/test-email.ts"
+    "test:copies": "tsx scripts/test-copy-orders.ts",
+    "test:selection": "tsx scripts/test-order-selection.ts",
+    "test:email": "tsx --test tests/order-email.test.ts && tsx scripts/test-email.ts",
+    "test:price-books": "tsx scripts/test-price-books.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1149.0",
@@ -30,6 +34,8 @@
     "@radix-ui/react-popover": "1.2.0",
     "dotenv": "18.0.6",
     "next": "16.3.8",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.4.299",
     "pg": "8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",

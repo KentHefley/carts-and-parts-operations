@@ -29,6 +29,8 @@ model AppUser {
   sentNotifications Notification[] @relation("Actor")
   emails OrderEmail[]
   attachments OrderAttachment[]
+  priceBookFiles PriceBookFile[]
+  priceBookEvents PriceBookEvent[]
 }
 
 model SalesOrder {
@@ -143,4 +145,49 @@ model OrderAttachment {
   @@unique([orderId, uploaderId, requestKey])
   @@index([orderId, state, uploadedAt])
   @@index([state, expiresAt])
+}
+
+model PriceBook {
+  key String @id
+  currentFileId String? @db.Uuid
+  edition String @default("")
+  revision Int @default(0)
+  updatedAt DateTime @updatedAt
+  files PriceBookFile[]
+  events PriceBookEvent[]
+}
+
+model PriceBookFile {
+  id String @id @default(uuid()) @db.Uuid
+  bookKey String
+  book PriceBook @relation(fields: [bookKey], references: [key])
+  uploaderId String @db.Uuid
+  uploader AppUser @relation(fields: [uploaderId], references: [id])
+  requestKey String @db.Uuid
+  baseRevision Int
+  edition String
+  filename String
+  size Int
+  pages Int?
+  stagingKey String @unique
+  storageKey String @unique
+  state String @default("PENDING")
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  uploadedAt DateTime?
+  stagingCleanedAt DateTime?
+  objectCleanedAt DateTime?
+  @@unique([uploaderId, requestKey])
+  @@index([state, expiresAt])
+}
+
+model PriceBookEvent {
+  id String @id @default(uuid()) @db.Uuid
+  bookKey String
+  book PriceBook @relation(fields: [bookKey], references: [key])
+  actorId String @db.Uuid
+  actor AppUser @relation(fields: [actorId], references: [id])
+  createdAt DateTime @default(now())
+  changes Json
+  @@index([bookKey, createdAt])
 }
