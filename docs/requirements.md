@@ -131,7 +131,9 @@ Both calendars are visible to every approved user across locations. Only admins 
 
 Support Month (default), Week and Day, timed and all-day entries, multiple-day events and recurrence. Admins can change/delete one occurrence or entire series. Timed events display in event location's time zone with clear label; all-day dates do not shift by viewer time zone.
 
-Time Off/Birthday Calendar categories: Time Off, Birthday, Work Anniversary, Holiday. Distinct colors and labels. Admins can add/rename/deactivate categories, preserving existing entries. Optional person/location filters are not decided.
+Time Off/Birthday Calendar categories: Time Off, Birthday, Work Anniversary, Holiday. Distinct colors and labels. Admins can add/rename/deactivate categories, preserving existing entries.
+
+October 12 approved calendar refinement: both calendars have a People filter supporting one or multiple employees, removable selected-person chips and Clear Filters (returns to all people). Management bars use a consistent admin-editable color per person; multiple-person events use the primary person's color while showing everyone in details. Events without a person use a neutral color. Employee calendar bars use category colors: teal Time Off, purple Birthday, orange Work Anniversary, and a distinct Holiday color. Keep names/titles visible so color is never the only identifier. These colors do not introduce management-calendar categories. Location filtering remains undecided.
 
 ## Price books and reports
 
@@ -172,3 +174,5 @@ October 10: Billing and Store Information includes a Same as Invoice checkbox. C
 October 10 email formatting: insert one blank line before Invoice To, Store Name and Description of Service. Omit only completely unused product item rows (quantity, description and unit price all blank/whitespace). Keep all other selected blank fields. Include partially entered product rows and zero quantities, preserving original item numbers; prices remain excluded from email.
 
 Price Books implementation note (October 12): initial/replacement files are PDF only with the existing 20 MB storage limit. Invalid, encrypted or unreadable PDFs are rejected before publication. Current validation permits 1–2000 pages. Existing books remain current until verified replacement; only current files are exposed. Edition month/year is independently admin-editable; uploader/time and edition/replacement events are audited. Local cleanup retries are admin-only; hosted cleanup scheduling remains a release prerequisite.
+
+October 12 filter refinement: both calendars show selected people as visible chips outside the dropdown, with a named remove button for each. Clear Filters removes all selections and returns to all people. Removing the final chip also returns to all people. The separate All People button is removed.

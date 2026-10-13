@@ -119,3 +119,9 @@ October 10: Successful SO email toast/confetti dismisses after five seconds or w
 October 11: Order deletion, file deletion, expired Trash cleanup and Reload Saved Values use themed in-app confirmation dialogs. Cancel receives initial focus; Escape cancels and focus returns to the trigger. Pending actions disable controls and prevent dismissal. Confirmed Reload Saved Values skips the additional browser unload warning.
 
 Price Books implementation (October 12): /price-books now provides the approved tabs and original-PDF overlay. Admin controls include edition month/year, upload/replace, pending-upload verification and pending-storage cleanup. Regular users receive View Book and Download PDF only. Upload timestamp remains automatic and distinct from edition.
+
+Calendar People filter: selected employees appear as removable chips outside the dropdown. Clear Filters returns to all people; no separate All People button. Removing a chip also unchecks that employee in the dropdown. Existing OR matching remains.
+
+Calendar filter usability: People closes on outside click/touch, keyboard focus leaving the dropdown, or Escape (which returns focus to its summary). Inside selections keep it open. Grid time zone sits at the right of the desktop filter row and takes its own full-width row on phones.
+
+Calendar Settings layout refinement: use separate bordered People and (employee-only) Event Categories sections, each with its Add button alongside its heading. Rows display a color swatch, name, active/inactive label and a consistent right-aligned Edit button with a named accessibility label. Existing permissions and settings behavior are unchanged.

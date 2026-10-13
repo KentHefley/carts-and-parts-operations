@@ -22,27 +22,33 @@
     "test:copies": "tsx scripts/test-copy-orders.ts",
     "test:selection": "tsx scripts/test-order-selection.ts",
     "test:email": "tsx --test tests/order-email.test.ts && tsx scripts/test-email.ts",
-    "test:price-books": "tsx scripts/test-price-books.ts"
+    "test:price-books": "tsx scripts/test-price-books.ts",
+    "test:calendars": "tsx --test tests/calendar-model.test.ts && tsx scripts/test-calendars.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1149.0",
     "@aws-sdk/s3-request-presigner": "3.1149.0",
     "@clerk/nextjs": "^7.9.11",
     "@daypicker/react": "10.0.2",
+    "@fullcalendar/react": "7.1.2",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "@radix-ui/react-popover": "1.2.0",
     "dotenv": "18.0.6",
+    "luxon": "3.7.2",
     "next": "16.3.8",
     "pdf-lib": "1.17.1",
     "pdfjs-dist": "6.4.299",
     "pg": "8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "server-only": "0.0.1"
+    "rrule": "2.8.1",
+    "server-only": "0.0.1",
+    "temporal-polyfill": "1.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/luxon": "3.7.1",
     "@types/node": "^20",
     "@types/pg": "8.23.1",
     "@types/react": "^19",

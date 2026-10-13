@@ -191,3 +191,42 @@ model PriceBookEvent {
   changes Json
   @@index([bookKey, createdAt])
 }
+
+model CalendarPerson {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  userId String? @unique @db.Uuid
+  color String @default("#1764A0")
+  active Boolean @default(true)
+  revision Int @default(0)
+}
+
+model CalendarCategory {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  color String
+  active Boolean @default(true)
+  revision Int @default(0)
+}
+
+model CalendarEntry {
+  id String @id @db.Uuid
+  kind String
+  creatorId String @db.Uuid
+  payload Json
+  exceptions Json @default("{}")
+  revision Int @default(0)
+  deletedAt DateTime?
+  updatedAt DateTime @updatedAt
+  @@index([kind, deletedAt])
+}
+
+model CalendarAudit {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String @db.Uuid
+  recordId String @db.Uuid
+  recordType String
+  createdAt DateTime @default(now())
+  changes Json
+  @@index([recordId, createdAt])
+}

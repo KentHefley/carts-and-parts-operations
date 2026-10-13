@@ -60,7 +60,7 @@ Kent approved all six supplied recommendations on October 5, 2026: terminal-stat
 - Define first-admin provisioning and protect against accidentally removing the last administrator.
 - Define upload types/sizes/storage limits, preview behavior and cleanup retry handling.
 - October 8: Kent approved rolling 60-second same-order/same-actor edit grouping, distinct new-assignee alerts and retention until a cleanup policy is agreed. Deletion/restoration notifications and treatment of comment edits/deletions remain unresolved.
-- Confirm recurrence patterns, exceptions and daylight-saving behavior; optional person/location calendar filters remain undecided.
+- Confirm recurrence patterns, exceptions and daylight-saving behavior; People filters were approved October 12. Location filtering remains undecided.
 - Specify report columns, totals/blank-data presentation, sorting and download layouts.
 - Confirm sender/reply-to/domain for email and failure/retry handling; no provider purchases authorized.
 - Define search punctuation/spacing treatment and assignment-column sorting where multiple users exist.
@@ -87,3 +87,5 @@ Latest October 8 closeout/NTE correction: Kent reversed the numeric NTE request;
 October 8 email-format/NTE correction: Kent confirmed NTE should be a numeric field without mandatory two-decimal formatting. Use compact consecutive label/value lines in SO emails, matching the provided current-email reference and targeting US Letter printing. Preserve blanks/all item rows; long content may overflow rather than being truncated. No NTE calculation or cap-enforcement rule is inferred.
 
 October 8 Resend setup update: Kent supplied RESEND_API_KEY locally and confirmed his Resend account email as kent@cartsandparts.com. Development uses onboarding@resend.dev and a server-enforced exact recipient allowlist for that address. Other assignees are rejected rather than redirected. The disabled placeholder is superseded by functional development sending. Company-domain sender, reply-to and signed delivery callbacks remain unresolved before broader pilot/live delivery. Durable retries reuse the immutable email and provider idempotency key within a conservative 23-hour window; older uncertain attempts require provider review.
+
+Deferred management-calendar roster (October 12): Kent confirmed the main Calendar is primarily for management schedules and should use only a selected subset of employees, with no color legend for every app user. The roster is not yet known. Defer implementation until Kent supplies the people; confirm how this subset applies to event selection and filtering then. Do not alter the employee calendar or existing events as part of this deferred request.

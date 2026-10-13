@@ -10,8 +10,8 @@ const navigation: { label: string; href?: string; icon: string }[] = [
   { label: "Sales Orders", href: "/sales-orders", icon: "orders" },
   { label: "Completed Sales Orders", href: "/completed-orders", icon: "check" },
   { label: "Price Books", href: "/price-books", icon: "book" },
-  { label: "Calendar", icon: "calendar" },
-  { label: "Time Off/Birthday Calendar", icon: "people" },
+  { label: "Calendar", href: "/calendar", icon: "calendar" },
+  { label: "Time Off/Birthday Calendar", href: "/employee-calendar", icon: "people" },
 ];
 export function NavigationIcon({ kind }: { kind: string }) {
   const paths: Record<string, string> = { home: "M3 10 12 3l9 7v11h-6v-7H9v7H3Z", orders: "M6 3h12v18H6ZM9 8h6M9 12h6M9 16h4", check: "M5 12l4 4L19 6", book: "M3 4h7l2 2 2-2h7v16h-7l-2 2-2-2H3ZM12 6v16", calendar: "M4 5h16v16H4ZM4 10h16M8 3v4M16 3v4", people: "M16 21v-3a4 4 0 0 0-8 0v3M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z", report: "M5 21V11M12 21V3M19 21V7", settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" };
