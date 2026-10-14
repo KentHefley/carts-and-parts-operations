@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  outputFileTracingIncludes: { "/reports/export": ["./public/branding/logo.png"] },
 };
 
 export default nextConfig;

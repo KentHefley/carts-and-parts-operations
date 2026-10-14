@@ -9,7 +9,7 @@ import "@fullcalendar/react/themes/monarch/palettes/blue.css";
 import { DateTime } from "luxon";
 import { useRouter } from "next/navigation";
 import { expandEntries, textColor, type CalendarKind, type Entry, type Person, type Category, type EventDetails, type Occurrence } from "../../lib/calendar-model";
-import { saveEvent, saveSetting } from "./actions";
+import { saveEvent, saveSetting, addPerson } from "./actions";
 const plugins = [themePlugin, dayGridPlugin];
 const toolbar = { start: "prev,next today", center: "title", end: "dayGridMonth,dayGridWeek,dayGridDay" };
 const views = { dayGridMonth: { dayMaxEvents: 3 }, dayGridWeek: { dayMaxEvents: 3 }, dayGridDay: { dayMaxEvents: false } };
@@ -59,7 +59,7 @@ export function CalendarScreen({ kind, admin, entries, people, categories }: { k
   return <main className="screen-page calendar-screen"><div className="screen-heading"><div><h1>{title}</h1><p className="screen-caption">Manually maintained schedules · Sunday starts the week</p></div>{admin && <button className="primary-button" onClick={() => setSelected("new")}>Add Event</button>}</div>
     <div className="calendar-filters"><details ref={peopleDropdown}><summary>People {filter.length ? `(${filter.length} selected)` : "— All People"}</summary><fieldset><legend>Show events for any selected person</legend>{people.map(person => <label key={person.id}><input type="checkbox" checked={filter.includes(person.id)} onChange={event => setFilter(previous => event.target.checked ? [...previous, person.id] : previous.filter(id => id !== person.id))} />{person.name}{!person.active ? " (inactive)" : ""}</label>)}</fieldset></details><div className="calendar-selected-people" aria-label="Selected people">{people.filter(person => filter.includes(person.id)).map(person => <span className="calendar-person-chip" key={person.id}>{person.name}<button type="button" aria-label={`Remove ${person.name} from filters`} onClick={() => setFilter(previous => previous.filter(id => id !== person.id))}>×</button></span>)}</div><button onClick={() => setFilter([])}>Clear Filters</button><label className="calendar-grid-zone">Grid time zone<select value={zone} onChange={event => setZone(event.target.value)}>{zoneOptions.map(value => <option key={value}>{value}</option>)}</select></label></div>
     <p className="screen-caption">Timed bars use the grid time zone. Open an event for its location’s local time and full details. All-day dates stay unchanged.</p>
-    <div className="calendar-legend" aria-label={kind === "management" ? "Person colors" : "Category colors"}>{(kind === "management" ? people : categories).filter(item => item.active).map(item => <span key={item.id} style={{ background: item.color, color: textColor(item.color) }}>{item.name}</span>)}{kind === "management" && <span style={{ background: "#596575", color: "white" }}>No person</span>}</div>
+    <div className="calendar-legend" aria-label={kind === "management" ? "Person colors" : "Category colors"}>{(kind === "management" ? people : categories).filter(item => item.active && (kind === "employee" || occurrences.some(event => event.details.people.includes(item.id)))).map(item => <span key={item.id} style={{ background: item.color, color: textColor(item.color) }}>{item.name}</span>)}{kind === "management" && occurrences.some(event => !event.details.people.length) && <span style={{ background: "#596575", color: "white" }}>No person</span>}</div>
     <div className="calendar-grid"><FullCalendar plugins={plugins} initialView="dayGridMonth" firstDay={0} headerToolbar={toolbar} views={views} timeZone={zone} events={events} eventClick={eventClick} eventContent={render} datesSet={datesSet} moreLinkClick="day" displayEventTime={false} eventInteractive editable={false} height="auto" /></div>
     {!occurrences.length && <p role="status">No events in this date range for the selected people.</p>}
     {admin && <details className="calendar-settings"><summary>Calendar Settings</summary>
@@ -95,7 +95,7 @@ function Modal({ title, busy, onClose, children }: { title: string; busy: boolea
   return <dialog className="calendar-dialog" ref={dialog} aria-labelledby="calendar-dialog-title" aria-busy={busy} onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}><header><h2 id="calendar-dialog-title">{title}</h2><button disabled={busy} onClick={onClose}>Close</button></header>{children}</dialog>;
 }
 
-function EventDialog({ kind, admin, occurrence, entry, people, categories, onClose }: { kind: CalendarKind; admin: boolean; occurrence: Occurrence | null; entry?: Entry; people: Person[]; categories: Category[]; onClose: () => void }) {
+function EventDialog({ kind, admin, occurrence, entry, people: initialPeople, categories, onClose }: { kind: CalendarKind; admin: boolean; occurrence: Occurrence | null; entry?: Entry; people: Person[]; categories: Category[]; onClose: () => void }) {
   const router = useRouter();
   const [id] = useState(() => entry?.id ?? crypto.randomUUID());
   const [editing, setEditing] = useState(!entry);
@@ -103,6 +103,22 @@ function EventDialog({ kind, admin, occurrence, entry, people, categories, onClo
   const [details, setDetails] = useState<EventDetails>(occurrence?.details ?? { title: "", people: [], primaryPerson: "", location: "", allDay: true, start: today(), end: today(), zone: "America/Chicago", repeat: "NONE", until: "", notes: "", category: kind === "employee" ? categories.find(item => item.active)?.id ?? "" : "" });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [people, setPeople] = useState(initialPeople);
+  const [personInput, setPersonInput] = useState(() => ({ name: "", id: crypto.randomUUID() }));
+  function selectPerson(personId: string) {
+    setDetails(previous => ({ ...previous, people: previous.people.includes(personId) ? previous.people : [...previous.people, personId], primaryPerson: previous.primaryPerson || personId }));
+    setPersonInput({ name: "", id: crypto.randomUUID() });
+  }
+  async function addName() {
+    if (!personInput.name.trim() || busy) return;
+    setBusy(true); setMessage("");
+    try {
+      const result = await addPerson(personInput);
+      if (result.ok) { setPeople(previous => [...previous.filter(person => person.id !== result.person.id), result.person].sort((a, b) => a.name.localeCompare(b.name))); selectPerson(result.person.id); router.refresh(); }
+      else setMessage(result.message);
+    } catch { setMessage("Could not confirm the new person. Your input is preserved; retry before entering another name."); }
+    finally { setBusy(false); }
+  }
   const [deleting, setDeleting] = useState(false);
   const repeating = entry?.payload.repeat !== "NONE" && !!entry;
   function update<K extends keyof EventDetails>(key: K, value: EventDetails[K]) { setDetails(previous => ({ ...previous, [key]: value })); }
@@ -119,7 +135,12 @@ function EventDialog({ kind, admin, occurrence, entry, people, categories, onClo
         {repeating && <label>Apply changes to<select value={scope} onChange={event => { const next = event.target.value as typeof scope; setScope(next); setDetails(next === "series" ? entry!.payload : occurrence!.details); setDeleting(false); }}><option value="occurrence">Only this occurrence</option><option value="series">Entire series</option></select></label>}
         {repeating && scope === "series" && <p>Existing occurrence exceptions stay in place. Changes to the repeat pattern apply to the series.</p>}
         <label>Title<input required maxLength={200} value={details.title} onChange={event => update("title", event.target.value)} /></label>
-        <fieldset><legend>People</legend>{people.filter(person => person.active || details.people.includes(person.id)).map(person => <label className="calendar-checkbox" key={person.id}><input type="checkbox" checked={details.people.includes(person.id)} onChange={event => { const selected = event.target.checked ? [...details.people, person.id] : details.people.filter(id => id !== person.id); setDetails(previous => ({ ...previous, people: selected, primaryPerson: selected.includes(previous.primaryPerson) ? previous.primaryPerson : selected[0] ?? "" })); }} />{person.name}{!person.active ? " (inactive)" : ""}</label>)}</fieldset>
+        <fieldset className="calendar-person-picker"><legend>People</legend>
+          <div className="calendar-selected-people" aria-label="Event people">{people.filter(person => details.people.includes(person.id)).map(person => <span className="calendar-person-chip" key={person.id}><span className="calendar-setting-swatch" aria-hidden="true" style={{ background: person.color }} />{person.name}<button type="button" aria-label={`Remove ${person.name} from event`} onClick={() => setDetails(previous => { const selected = previous.people.filter(id => id !== person.id); return { ...previous, people: selected, primaryPerson: selected.includes(previous.primaryPerson) ? previous.primaryPerson : selected[0] ?? "" }; })}>×</button></span>)}</div>
+          <label>Select or add person<input value={personInput.name} maxLength={200} placeholder="Type a name" aria-describedby="calendar-person-help" onChange={event => setPersonInput({ name: event.target.value, id: crypto.randomUUID() })} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); void addName(); } }} /></label>
+          <p className="screen-caption" id="calendar-person-help">Choose a saved name or add someone new. New names get a color automatically and remain available for future events. This does not create a login account.</p>
+          {personInput.name.trim() && <><ul className="calendar-person-suggestions" aria-label="Matching saved people">{people.filter(person => !details.people.includes(person.id) && person.name.toLowerCase().includes(personInput.name.trim().toLowerCase())).slice(0, 8).map(person => <li key={person.id}><button type="button" disabled={!person.active} onClick={() => selectPerson(person.id)}>{person.name}{!person.active ? " (inactive)" : ""}</button></li>)}</ul><button type="button" onClick={() => void addName()}>{people.some(person => person.name.trim().replace(/\s+/g, " ").toLowerCase() === personInput.name.trim().replace(/\s+/g, " ").toLowerCase()) ? "Select Saved Person" : `Add “${personInput.name.trim()}”`}</button></>}
+        </fieldset>
         {!!details.people.length && <label>Primary person<select value={details.primaryPerson} onChange={event => update("primaryPerson", event.target.value)}>{people.filter(person => details.people.includes(person.id)).map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}
         {kind === "employee" && <label>Category<select required value={details.category} onChange={event => update("category", event.target.value)}><option value="">Choose category</option>{categories.filter(category => category.active || category.id === details.category).map(category => <option key={category.id} value={category.id}>{category.name}{!category.active ? " (inactive)" : ""}</option>)}</select></label>}
         <label>Location<input maxLength={200} value={details.location} onChange={event => update("location", event.target.value)} /></label>

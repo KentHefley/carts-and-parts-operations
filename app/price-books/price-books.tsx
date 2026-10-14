@@ -55,14 +55,18 @@ function BookAdmin({ book, pending }: { book: BookView; pending: { id: string; f
     finally { setBusy(false); }
   }
   return <section className="book-admin" aria-label="Administrator controls"><h3>Manage {book.key} Book</h3>
-    <fieldset disabled={busy}><label>Edition month and year<input type="month" value={edition} onChange={event => setEdition(event.target.value)} /></label>
+    <fieldset disabled={busy}>
+      <section className="book-admin-section" aria-labelledby={`edition-heading-${book.key}`}><h4 id={`edition-heading-${book.key}`}>Edition Date</h4><p className="screen-caption">Set the month and year shown beside this book’s page count.</p><div className="book-admin-controls"><label>Edition month and year<input type="month" value={edition} onChange={event => setEdition(event.target.value)} /></label>
       <button onClick={async () => { setBusy(true); try { const result = await saveBookEdition(book.key, book.revision, edition); setMessage(result.message); if (result.ok) router.refresh(); } catch { setMessage("Edition could not be saved. Retry later."); } finally { setBusy(false); } }}>Save Edition</button>
-      <label>PDF file (up to 20 MB)<input type="file" accept="application/pdf,.pdf" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label>
+      </div></section>
+      <section className="book-admin-section" aria-labelledby={`pdf-heading-${book.key}`}><h4 id={`pdf-heading-${book.key}`}>{book.file ? "Replace PDF" : "Upload PDF"}</h4><p className="screen-caption">Original quality is preserved. Replacements become available after verification, then the previous PDF is removed. The edition date above is used for this upload.</p><div className="book-admin-controls"><label>PDF file (up to 20 MB)<input type="file" accept="application/pdf,.pdf" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label>
       <button disabled={!file} onClick={upload}>{book.file ? "Replace PDF" : "Upload PDF"}</button>
-      <p>Replacing a book removes its previous PDF after the new PDF is verified. Original quality is preserved.</p>
+      </div></section>
+      {(retryId || pending.length > 0) && <section className="book-admin-section" aria-labelledby={`pending-heading-${book.key}`}><h4 id={`pending-heading-${book.key}`}>Uploads Awaiting Verification</h4><p className="screen-caption">Check an interrupted upload before uploading the same PDF again.</p>
       {retryId && <button onClick={() => verify(retryId)}>Retry Verification</button>}
       {pending.filter(item => item.id !== retryId).map(item => <p key={item.id}>{item.filename} <button onClick={() => verify(item.id)}>Verify Pending Upload</button></p>)}
-      <button onClick={async () => { setBusy(true); try { setMessage((await retryBookCleanup()).message); } catch { setMessage("Cleanup unavailable. Retry later."); } finally { setBusy(false); } }}>Retry pending PDF cleanup</button>
+      </section>}
+      <details className="book-maintenance"><summary>Maintenance</summary><p className="screen-caption">Retry removal of leftover PDFs from earlier uploads. This processes pending cleanup for all three books.</p><button onClick={async () => { setBusy(true); try { setMessage((await retryBookCleanup()).message); } catch { setMessage("Cleanup unavailable. Retry later."); } finally { setBusy(false); } }}>Retry pending PDF cleanup</button></details>
     </fieldset><p role="status" aria-live="polite">{busy ? "Working… " : ""}{message}</p>
   </section>;
 }

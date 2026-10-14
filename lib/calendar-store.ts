@@ -5,15 +5,36 @@ async function admin(tx: Prisma.TransactionClient, actorId: string) {
   const actor = await tx.appUser.findUnique({ where: { id: actorId } });
   if (!actor?.active || actor.role !== "ADMIN") throw new Error("Administrator access required.");
 }
-export async function calendarData(db: PrismaClient, kind: CalendarKind, signedInUserId: string) {
-  const accounts = await db.appUser.findMany({ where: { id: signedInUserId, active: true }, select: { id: true, displayName: true, email: true } });
-  const linked = await db.calendarPerson.findMany({ where: { userId: { in: accounts.map(user => user.id) } }, select: { userId: true } });
-  const palette = ["#1764A0", "#A04B16", "#6446A0", "#14765C", "#A02E5C", "#566817"];
-  const missing = accounts.filter(user => !linked.some(person => person.userId === user.id));
-  if (missing.length) await db.calendarPerson.createMany({ data: missing.map(user => ({ userId: user.id, name: user.displayName || user.email, color: palette[parseInt(user.id.slice(0, 4), 16) % palette.length] })), skipDuplicates: true });
+export async function calendarData(db: PrismaClient, kind: CalendarKind) {
   const [people, categories, rows] = await Promise.all([db.calendarPerson.findMany({ orderBy: { name: "asc" } }), db.calendarCategory.findMany({ orderBy: { name: "asc" } }), db.calendarEntry.findMany({ where: { kind, deletedAt: null }, take: 1001 })]);
   if (rows.length > 1000) throw new Error("Calendar capacity reached. Contact an administrator.");
   return { people, categories, entries: rows.map(row => ({ id: row.id, kind: row.kind, revision: row.revision, payload: row.payload as unknown as EventDetails, exceptions: row.exceptions as unknown as Entry["exceptions"] })) };
+}
+const personName = (name: string) => name.trim().replace(/\s+/g, " ");
+const personKey = (name: string) => personName(name).toLowerCase();
+function nextPersonColor(used: string[]) {
+  for (let index = 0; index < 360; index++) {
+    const hue = (index * 137.508) % 360 / 60, chroma = .48, x = chroma * (1 - Math.abs(hue % 2 - 1));
+    const channels = hue < 1 ? [chroma, x, 0] : hue < 2 ? [x, chroma, 0] : hue < 3 ? [0, chroma, x] : hue < 4 ? [0, x, chroma] : hue < 5 ? [x, 0, chroma] : [chroma, 0, x];
+    const color = "#" + channels.map(channel => Math.round((channel + .12) * 255).toString(16).padStart(2, "0")).join("");
+    if (!used.some(existing => existing.toLowerCase() === color)) return color;
+  }
+  return "#1764A0";
+}
+export async function selectOrAddCalendarPerson(db: PrismaClient, actorId: string, input: { id: string; name: string }) {
+  if (!input || !uuid(input.id) || typeof input.name !== "string" || !personName(input.name) || input.name.length > 200) throw new Error("Enter a person’s name (up to 200 characters).");
+  return db.$transaction(async tx => {
+    await admin(tx, actorId);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('calendar-person-directory'))`;
+    const people = await tx.calendarPerson.findMany();
+    const retry = people.find(person => person.id === input.id);
+    if (retry && personKey(retry.name) !== personKey(input.name)) throw new Error("This person changed. Refresh and select the saved name.");
+    const existing = retry ?? people.find(person => personKey(person.name) === personKey(input.name));
+    if (existing) { if (!existing.active) throw new Error("This person is inactive. An admin can reactivate them in Calendar Settings."); return existing; }
+    const row = await tx.calendarPerson.create({ data: { id: input.id, name: personName(input.name), color: nextPersonColor(people.map(person => person.color)) } });
+    await tx.calendarAudit.create({ data: { actorId, recordId: row.id, recordType: "person", changes: { before: null, after: { name: row.name, color: row.color, active: true } } } });
+    return row;
+  }, { maxWait: 10_000, timeout: 30_000 });
 }
 export async function saveCalendarEntry(db: PrismaClient, actorId: string, input: { id: string; kind: CalendarKind; revision: number | null; details: unknown; occurrence?: string; remove?: boolean }) {
   if (!input || !uuid(input.id) || !["management", "employee"].includes(input.kind) || (input.revision !== null && (!Number.isSafeInteger(input.revision) || input.revision < 0)) || (input.occurrence && !/^\d{4}-\d\d-\d\d(?:T\d\d:\d\d)?$/.test(input.occurrence))) throw new Error("Invalid calendar request.");
@@ -59,12 +80,17 @@ export async function saveCalendarEntry(db: PrismaClient, actorId: string, input
       after = { action: input.remove ? "Deleted" : "Edited", scope: input.occurrence ?? "series", details: details as unknown as Prisma.InputJsonValue | null };
     }
     await tx.calendarAudit.create({ data: { actorId, recordId: input.id, recordType: input.kind, changes: { before: old ? { payload: old.payload, exceptions: old.exceptions } : null, after } } });
-  }, { timeout: 30_000 });
+  }, { maxWait: 10_000, timeout: 30_000 });
 }
 export async function saveCalendarSetting(db: PrismaClient, actorId: string, input: { type: "person" | "category"; id: string; revision: number | null; name: string; color: string; active: boolean }) {
   if (!input || !["person", "category"].includes(input.type) || !uuid(input.id) || typeof input.name !== "string" || !input.name.trim() || input.name.length > 200 || !colorValid(input.color) || typeof input.active !== "boolean" || (input.revision !== null && (!Number.isSafeInteger(input.revision) || input.revision < 0))) throw new Error("Enter a name and valid color.");
   await db.$transaction(async tx => {
     await admin(tx, actorId);
+    if (input.type === "person") {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('calendar-person-directory'))`;
+      const people = await tx.calendarPerson.findMany();
+      if (people.some(person => person.id !== input.id && personKey(person.name) === personKey(input.name))) throw new Error("A person with this name already exists.");
+    }
     const before = input.type === "person" ? await tx.calendarPerson.findUnique({ where: { id: input.id } }) : await tx.calendarCategory.findUnique({ where: { id: input.id } });
     const data = { name: input.name.trim(), color: input.color, active: input.active };
     if (input.revision === null) {
@@ -77,5 +103,5 @@ export async function saveCalendarSetting(db: PrismaClient, actorId: string, inp
       if (result.count !== 1) throw new Error("This setting changed. Refresh and retry.");
     }
     await tx.calendarAudit.create({ data: { actorId, recordId: input.id, recordType: input.type, changes: { before: before ? { name: before.name, color: before.color, active: before.active } : null, after: data } } });
-  }, { timeout: 30_000 });
+  }, { maxWait: 10_000, timeout: 30_000 });
 }

@@ -2,6 +2,7 @@
   "name": "carts-and-parts-operations",
   "version": "0.1.0",
   "private": true,
+  "overrides": { "exceljs": { "uuid": "11.1.1" } },
   "scripts": {
     "dev": "next dev",
     "predev": "node scripts/copy-pdf-worker.mjs",
@@ -23,7 +24,8 @@
     "test:selection": "tsx scripts/test-order-selection.ts",
     "test:email": "tsx --test tests/order-email.test.ts && tsx scripts/test-email.ts",
     "test:price-books": "tsx scripts/test-price-books.ts",
-    "test:calendars": "tsx --test tests/calendar-model.test.ts && tsx scripts/test-calendars.ts"
+    "test:calendars": "tsx --test tests/calendar-model.test.ts && tsx scripts/test-calendars.ts",
+    "test:reports": "tsx --test tests/report-model.test.ts tests/report-export.test.ts && tsx scripts/test-reports.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1149.0",
@@ -35,6 +37,7 @@
     "@prisma/client": "7.10.0",
     "@radix-ui/react-popover": "1.2.0",
     "dotenv": "18.0.6",
+    "exceljs": "^4.4.0",
     "luxon": "3.7.2",
     "next": "16.3.8",
     "pdf-lib": "1.17.1",

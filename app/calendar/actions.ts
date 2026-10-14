@@ -1,8 +1,16 @@
 "use server";
 import { requireAdmin } from "../../lib/access";
 import { getDatabase } from "../../lib/db";
-import { saveCalendarEntry, saveCalendarSetting } from "../../lib/calendar-store";
+import { saveCalendarEntry, saveCalendarSetting, selectOrAddCalendarPerson } from "../../lib/calendar-store";
 import { revalidatePath } from "next/cache";
+export async function addPerson(input: { id: string; name: string }) {
+  const actor = await requireAdmin();
+  try {
+    const person = await selectOrAddCalendarPerson(getDatabase(), actor.id, input);
+    revalidatePath("/calendar"); revalidatePath("/employee-calendar");
+    return { ok: true as const, person };
+  } catch (error) { return { ok: false as const, message: error instanceof Error && /^(Enter|This person)/.test(error.message) ? error.message : "Could not add this person. Your event input is preserved; retry later." }; }
+}
 export async function saveEvent(input: Parameters<typeof saveCalendarEntry>[2]) {
   const actor = await requireAdmin();
   try { await saveCalendarEntry(getDatabase(), actor.id, input); revalidatePath("/calendar"); revalidatePath("/employee-calendar"); return { ok: true, message: input.remove ? "Event deleted." : "Event saved." }; }
