@@ -20,6 +20,8 @@ model AppUser {
   displayName String?
   role        UserRole @default(USER)
   active      Boolean  @default(true)
+  loginDeletionRequestedAt DateTime?
+  loginDeletedAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orders      SalesOrder[]
@@ -31,6 +33,38 @@ model AppUser {
   attachments OrderAttachment[]
   priceBookFiles PriceBookFile[]
   priceBookEvents PriceBookEvent[]
+}
+
+model UserAccessAudit {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String @db.Uuid
+  userId String @db.Uuid
+  createdAt DateTime @default(now())
+  changes Json
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model EmployeeInvitation {
+  id String @id @db.Uuid
+  email String
+  actorId String @db.Uuid
+  state String @default("SENDING")
+  providerId String? @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  acceptedUserId String? @db.Uuid
+  @@index([email, state])
+  @@index([createdAt])
+}
+
+model InvitationAudit {
+  id String @id @default(uuid()) @db.Uuid
+  invitationId String @db.Uuid
+  actorId String
+  action String
+  createdAt DateTime @default(now())
+  @@index([invitationId, createdAt])
 }
 
 model SalesOrder {

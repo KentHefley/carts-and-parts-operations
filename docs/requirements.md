@@ -1,5 +1,15 @@
 # Carts and Parts Operations requirements
 
+October 14 user deletion: Super Admin alone can permanently delete another employee's Clerk login. Other admins retain deactivate/reactivate access. Preserve the inactive AppUser historical identity and all company order/file/history associations. Deletion pending/complete cannot be reactivated through access controls or invitations; failed external deletion remains blocked and retryable by Super Admin. Super Admin cannot be deleted. Delegating deletion to other admins is deferred.
+
+October 14 invitation safety: show an already-signed-in message on the invitation signup page, with explicit sign-out to continue using another account. Preserve the invitation link through sign-out; do not accept it as the current user or automatically sign them out.
+
+October 14 employee invitations: admins invite by email from User Management. New employees begin as Users and can be promoted afterward. Clerk sends the signup invitation; app approval is bound to its backend-only metadata and verified primary email. Cancellation/expiry blocks provisioning; existing accounts are never replaced/reactivated by an invitation. Development invitation recipients require a separate exact allowlist.
+
+October 14 Super Admin: Kent's approved `kent@cartsandparts.com` account is protected against role demotion and deactivation through User Management, including self changes. Display Super Admin and omit access-edit controls for it. Other admins retain existing administration powers. This designation does not grant authentication or replace the stored Admin role.
+
+October 14 User Management: admins can change existing approved employees' User/Admin role and active access, subject to Super Admin and pending/deleted account protections above. Keep at least one active admin, preserve authorship/assignments/history, and record access changes. Invitations are now available as described above.
+
 October 11 attachment decision: allow PDF, JPG/JPEG, PNG and WebP files up to 20 MB each, preserving original bytes/quality. Kent configured private development R2 credentials and localhost upload CORS; synthetic storage checks passed. Public-access settings still require his confirmation.
 
 October 11 Trash clarification: creator/admin deletion retains the order and its files for 30 elapsed days. Only admins restore, preserving previous status and assignments and flagging inactive assignees. At expiry restoration stops; the next successful cleanup permanently removes all tracked R2 objects and detailed order data, retaining minimal identity/deletion/purge audit metadata. Storage failures must remain tracked and retryable. No early permanent-delete control is provided. See trash-milestone.md.

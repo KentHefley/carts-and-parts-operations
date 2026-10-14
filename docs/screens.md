@@ -4,6 +4,8 @@ Agreed direction, October 5, 2026. This is a browser-based responsive web app. S
 
 ## App shell and navigation
 
+October 14 access feedback correction: distinguish approved Users opening admin-only pages from unapproved/inactive employees. Admin-only denials show Administrator access required and Go to Dashboard. An approved account opening an old generic approval screen returns to Dashboard. Server permissions remain enforced.
+
 Carts and Parts logo; collapsible left sidebar on large screens, icon tooltips when collapsed, remembered user preference. On phones use a collapsible navigation menu. Top bar contains page title, notification bell, light/dark toggle and user menu. Remember theme preference.
 
 The bell is red when unread notifications exist and displays an unread count. With no unread notifications, show a neutral bell. Provide an accessible unread-count label and Mark all as read action; opening the panel alone does not clear unread notifications.
@@ -87,6 +89,16 @@ Month/Week day boxes use full-width, single-line event bars with ellipsis for lo
 Date Entered range controls, product-description and Invoice To contains searches, results and clearly labeled totals. Excel/CSV/PDF exports. Exclude Voided and Trash. Product reports show both matching product value and whole-order value without duplicate order totals.
 
 ## Administration (admin only)
+
+User deletion: Super Admin sees Delete User Account on other current accounts, with an app confirmation explaining permanent login deletion and retained company records. Pending deletion shows blocked access and Retry User Deletion only to Super Admin. Completed deletions move to a collapsed Deleted Users section with no role/access controls. Other admins retain ordinary role and active-access controls on eligible accounts; they never see deletion controls. Recent Access History includes deletion request, unconfirmed outcome and completion events.
+
+Invitation safety: `/sign-up` renders an already-signed-in message instead of mounting Clerk signup when a session exists. Return to App preserves the current login; Sign Out and Continue preserves only Clerk's invitation ticket/status and returns to signup. No automatic sign-out or invitation acceptance.
+
+Employee invitations: email form with app confirmation, latest 50 requests in a collapsed Invitations panel, Check Status and Cancel Invitation (retry cancellation if provider cleanup fails). Distinguish provider acceptance from inbox delivery and uncertain outcomes. Invited employees sign up at `/sign-up`, then verified acceptance creates User access. Development links use configured APP_URL; localhost links work only on the same machine.
+
+Kent's protected account shows Super Admin with an explanation instead of editable role/active controls. Protection is enforced server-side even for direct requests.
+
+October 14: User Management lists approved accounts by name/email, current role and active status. Explicit Save Access opens an app confirmation. Show save failures and Reload for stale settings. Recent Access History is collapsed initially and shows the latest 50 changes in America/Chicago. Last-active-admin removal is blocked server-side. Calendar people are separate; invitations are available as described above.
 
 Use Add Sales Order Field as the navigation button label for field configuration, per Kent's review. This screen also provides admin-only editing of existing field definitions.
 

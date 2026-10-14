@@ -1,0 +1,7 @@
+# Employee invitations
+
+Admin-only invitations create User access after a verified employee accepts Clerk's invitation and signs in. Preserve existing accounts; invitations cannot reactivate, overwrite or promote them. Use Clerk invitation email and an app signup route. Development sending requires an explicit server-only recipient allowlist. Never send synthetic test messages to real recipients.
+
+Persist intent before calling Clerk; bind backend-only invitation metadata to the saved invitation ID. Serialize duplicate requests, preserve uncertain outcomes for provider review rather than blindly retrying, and allow cancellation that immediately prevents app provisioning. Keep immutable send/cancel/accept history. Recheck active admin permission server-side. Provision only a verified matching primary email and matching backend metadata, with an unexpired locally approved invitation; ordinary unapproved logins remain denied.
+
+Acceptance checks: regular/inactive admins rejected; existing users and duplicate email requests rejected; provider failure/uncertainty visible; no duplicate send on repeated request; expired/cancelled/mismatched invitation cannot provision; successful acceptance creates one User with real Clerk ID and profile name; cancelled links cannot grant access. Build and focused lint; fake-provider unit and guarded development DB tests. Kent performs real email/signup test with an authorized recipient.
