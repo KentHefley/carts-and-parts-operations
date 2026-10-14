@@ -24,7 +24,7 @@ export function ConfirmationDialog({ title, description, confirmLabel, onConfirm
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
   }, []);
-  return <dialog ref={dialog} className="confirmation-dialog" role="alertdialog" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} aria-busy={busy} onCancel={event => { event.preventDefault(); if (!busy) onCancel(); }}>
+  return <dialog ref={dialog} className="confirmation-dialog" role="alertdialog" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} aria-busy={busy} onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) onCancel(); }}>
     <h2 id={`${id}-title`}>{title}</h2>
     <p id={`${id}-description`}>{description}</p>
     {busy && <p role="status">Working…</p>}

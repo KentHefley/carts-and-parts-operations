@@ -9,7 +9,8 @@ import "@fullcalendar/react/themes/monarch/palettes/blue.css";
 import { DateTime } from "luxon";
 import { useRouter } from "next/navigation";
 import { expandEntries, textColor, type CalendarKind, type Entry, type Person, type Category, type EventDetails, type Occurrence } from "../../lib/calendar-model";
-import { saveEvent, saveSetting, addPerson } from "./actions";
+import { saveEvent, saveSetting, addPerson, previewPersonDeletion, removePerson } from "./actions";
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
 const plugins = [themePlugin, dayGridPlugin];
 const toolbar = { start: "prev,next today", center: "title", end: "dayGridMonth,dayGridWeek,dayGridDay" };
 const views = { dayGridMonth: { dayMaxEvents: 3 }, dayGridWeek: { dayMaxEvents: 3 }, dayGridDay: { dayMaxEvents: false } };
@@ -18,7 +19,8 @@ const today = () => DateTime.now().setZone("America/Chicago").toISODate()!;
 
 export function CalendarScreen({ kind, admin, entries, people, categories }: { kind: CalendarKind; admin: boolean; entries: Entry[]; people: Person[]; categories: Category[] }) {
   const [range, setRange] = useState({ from: DateTime.now().startOf("month").minus({ days: 7 }).toISODate()!, to: DateTime.now().endOf("month").plus({ days: 8 }).toISODate()! });
-  const [filter, setFilter] = useState<string[]>([]);
+  const [selectedPeople, setFilter] = useState<string[]>([]);
+  const filter = useMemo(() => selectedPeople.filter(id => people.some(person => person.id === id)), [selectedPeople, people]);
   const peopleDropdown = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const closeOutside = (event: Event) => {
@@ -163,5 +165,20 @@ function SettingDialog({ type, row, onClose }: { type: "person" | "category"; ro
   const [color, setColor] = useState(row?.color ?? "#1764A0");
   const [active, setActive] = useState(row?.active ?? true);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
-  return <Modal title={`${row ? "Edit" : "Add"} ${type === "person" ? "Person" : "Category"}`} busy={busy} onClose={onClose}><form onSubmit={async event => { event.preventDefault(); setBusy(true); try { const result = await saveSetting({ type, id, revision: row?.revision ?? null, name, color, active }); if (result.ok) { router.refresh(); onClose(); } else setMessage(result.message); } catch { setMessage("Could not save. Retry later."); } finally { setBusy(false); } }}><fieldset disabled={busy}><label>Name<input required maxLength={200} value={name} onChange={event => setName(event.target.value)} /></label><label>Bar color<input type="color" value={color} onChange={event => setColor(event.target.value)} /></label><label className="calendar-checkbox"><input type="checkbox" checked={active} onChange={event => setActive(event.target.checked)} />Active</label><button type="submit">Save {type === "person" ? "Person" : "Category"}</button></fieldset></form>{message && <p role="alert">{message}</p>}</Modal>;
+  const [deletion, setDeletion] = useState<{ id: string; name: string; revision: number; events: { id: string; revision: number }[]; affected: number; deleted: number; kept: number } | null>(null);
+  async function reviewDeletion() {
+    if (!row || busy) return;
+    setBusy(true); setMessage("");
+    try { const result = await previewPersonDeletion(row.id); if (result.ok) setDeletion(result.preview); else setMessage(result.message); }
+    catch { setMessage("Could not check existing events. Retry later."); }
+    finally { setBusy(false); }
+  }
+  async function confirmDeletion() {
+    if (!deletion || busy) return;
+    setBusy(true); setMessage("");
+    try { const result = await removePerson(deletion); if (result.ok) { router.refresh(); onClose(); } else { setDeletion(null); setMessage(result.message); } }
+    catch { setDeletion(null); setMessage("Deletion could not be confirmed. Refresh to review the saved names before retrying."); }
+    finally { setBusy(false); }
+  }
+  return <Modal title={`${row ? "Edit" : "Add"} ${type === "person" ? "Person" : "Category"}`} busy={busy} onClose={onClose}><form onSubmit={async event => { event.preventDefault(); setBusy(true); try { const result = await saveSetting({ type, id, revision: row?.revision ?? null, name, color, active }); if (result.ok) { router.refresh(); onClose(); } else setMessage(result.message); } catch { setMessage("Could not save. Retry later."); } finally { setBusy(false); } }}><fieldset disabled={busy}><label>Name<input required maxLength={200} value={name} onChange={event => setName(event.target.value)} /></label><label>Bar color<input type="color" value={color} onChange={event => setColor(event.target.value)} /></label><label className="calendar-checkbox"><input type="checkbox" checked={active} onChange={event => setActive(event.target.checked)} />Active</label><button type="submit">Save {type === "person" ? "Person" : "Category"}</button></fieldset></form>{type === "person" && row && <div className="calendar-delete-warning"><p>Delete removes this saved name from both calendars. Sole-person events are deleted; shared events keep their other participants. Active/Inactive remains available above.</p><button type="button" className="danger-button" disabled={busy} onClick={() => void reviewDeletion()}>Delete Person</button></div>}{deletion && <ConfirmationDialog title={`Delete ${deletion.name}?`} description={`${deletion.affected} saved events or recurring series are affected across both calendars. ${deletion.deleted} sole-person events/series will be deleted; ${deletion.kept} will remain with this person removed. Recurring occurrences follow the same rule; occurrences with other participants are preserved. If this was the primary person, the next remaining person becomes primary. This cannot be undone. Login accounts and audit history are retained.`} confirmLabel="Delete Person" busy={busy} onCancel={() => setDeletion(null)} onConfirm={() => void confirmDeletion()} />}{message && <p role="alert">{message}</p>}</Modal>;
 }

@@ -1,8 +1,18 @@
 "use server";
 import { requireAdmin } from "../../lib/access";
 import { getDatabase } from "../../lib/db";
-import { saveCalendarEntry, saveCalendarSetting, selectOrAddCalendarPerson } from "../../lib/calendar-store";
+import { saveCalendarEntry, saveCalendarSetting, selectOrAddCalendarPerson, calendarPersonDeletionPreview, deleteCalendarPerson } from "../../lib/calendar-store";
 import { revalidatePath } from "next/cache";
+export async function previewPersonDeletion(id: string) {
+  const actor = await requireAdmin();
+  try { return { ok: true as const, preview: await calendarPersonDeletionPreview(getDatabase(), actor.id, id) }; }
+  catch { return { ok: false as const, message: "Could not check this person’s events. Refresh and try again." }; }
+}
+export async function removePerson(input: Parameters<typeof deleteCalendarPerson>[2]) {
+  const actor = await requireAdmin();
+  try { await deleteCalendarPerson(getDatabase(), actor.id, input); revalidatePath("/calendar"); revalidatePath("/employee-calendar"); return { ok: true as const }; }
+  catch (error) { return { ok: false as const, message: error instanceof Error && /^This (person|event)/.test(error.message) ? error.message : "Could not confirm deletion. Review the current person and try again." }; }
+}
 export async function addPerson(input: { id: string; name: string }) {
   const actor = await requireAdmin();
   try {

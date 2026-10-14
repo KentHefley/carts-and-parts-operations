@@ -1,5 +1,6 @@
 import { Prisma, PrismaClient } from "../generated/prisma/client";
 import { isDeepStrictEqual } from "node:util";
+import { randomUUID } from "node:crypto";
 import { type CalendarKind, type Entry, type EventDetails, validateDetails, uuid, colorValid } from "./calendar-model";
 async function admin(tx: Prisma.TransactionClient, actorId: string) {
   const actor = await tx.appUser.findUnique({ where: { id: actorId } });
@@ -41,6 +42,7 @@ export async function saveCalendarEntry(db: PrismaClient, actorId: string, input
   const details = input.remove ? null : validateDetails(input.details);
   await db.$transaction(async tx => {
     await admin(tx, actorId);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('calendar-person-directory'))`;
     const old = await tx.calendarEntry.findUnique({ where: { id: input.id } });
     if (input.revision === null && old) {
       if (!old.deletedAt && old.creatorId === actorId && old.kind === input.kind && isDeepStrictEqual(old.payload, details)) return;
@@ -80,6 +82,65 @@ export async function saveCalendarEntry(db: PrismaClient, actorId: string, input
       after = { action: input.remove ? "Deleted" : "Edited", scope: input.occurrence ?? "series", details: details as unknown as Prisma.InputJsonValue | null };
     }
     await tx.calendarAudit.create({ data: { actorId, recordId: input.id, recordType: input.kind, changes: { before: old ? { payload: old.payload, exceptions: old.exceptions } : null, after } } });
+  }, { maxWait: 10_000, timeout: 30_000 });
+}
+function referencesPerson(payload: EventDetails, exceptions: Entry["exceptions"], id: string) {
+  return payload.people.includes(id) || Object.values(exceptions).some(details => details?.people.includes(id));
+}
+function removePerson(details: EventDetails, id: string): EventDetails {
+  const people = details.people.filter(person => person !== id);
+  return { ...details, people, primaryPerson: people.includes(details.primaryPerson) ? details.primaryPerson : people[0] ?? "" };
+}
+async function personEvents(tx: Prisma.TransactionClient, id: string) {
+  const rows = await tx.calendarEntry.findMany({ take: 10001, orderBy: { id: "asc" } });
+  if (rows.length > 10000) throw new Error("Calendar deletion capacity reached. Contact the maintainer before deleting names.");
+  return rows.filter(row => referencesPerson(row.payload as unknown as EventDetails, row.exceptions as unknown as Entry["exceptions"], id));
+}
+export async function calendarPersonDeletionPreview(db: PrismaClient, actorId: string, id: string) {
+  if (!uuid(id)) throw new Error("Invalid person identifier.");
+  return db.$transaction(async tx => {
+    await admin(tx, actorId);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('calendar-person-directory'))`;
+    const person = await tx.calendarPerson.findUnique({ where: { id } });
+    if (!person) throw new Error("This person was removed. Refresh Calendar Settings.");
+    const rows = await personEvents(tx, id);
+    const active = rows.filter(row => !row.deletedAt);
+    const deleted = active.filter(row => { const details = row.payload as unknown as EventDetails; return details.people.length === 1 && details.people[0] === id; }).length;
+    return { id, name: person.name, revision: person.revision, events: rows.map(row => ({ id: row.id, revision: row.revision })), affected: active.length, deleted, kept: active.length - deleted };
+  }, { maxWait: 10_000, timeout: 30_000 });
+}
+export async function deleteCalendarPerson(db: PrismaClient, actorId: string, input: { id: string; revision: number; events: { id: string; revision: number }[] }) {
+  if (!input || !uuid(input.id) || !Number.isSafeInteger(input.revision) || input.revision < 0 || !Array.isArray(input.events) || input.events.length > 10000 || input.events.some(row => !uuid(row?.id) || !Number.isSafeInteger(row.revision) || row.revision < 0) || new Set(input.events.map(row => row.id)).size !== input.events.length) throw new Error("Invalid deletion request.");
+  await db.$transaction(async tx => {
+    await admin(tx, actorId);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('calendar-person-directory'))`;
+    const person = await tx.calendarPerson.findUnique({ where: { id: input.id } });
+    if (!person) {
+      if (await tx.calendarAudit.findFirst({ where: { recordId: input.id, actorId, recordType: "person", changes: { path: ["action"], equals: "Deleted" } } })) return;
+      throw new Error("This person was removed. Refresh Calendar Settings.");
+    }
+    const rows = await personEvents(tx, input.id);
+    if (person.revision !== input.revision || !isDeepStrictEqual(rows.map(row => ({ id: row.id, revision: row.revision })), [...input.events].sort((a, b) => a.id.localeCompare(b.id)))) throw new Error("This person or their events changed. Review the deletion again before confirming.");
+    for (const row of rows) {
+      const oldPayload = row.payload as unknown as EventDetails, oldExceptions = row.exceptions as unknown as Entry["exceptions"];
+      const payload = removePerson(oldPayload, input.id);
+      const soleBase = oldPayload.people.length === 1 && oldPayload.people[0] === input.id;
+      const exceptions = Object.fromEntries(Object.entries(oldExceptions).map(([key, details]) => [key, details && details.people.length === 1 && details.people[0] === input.id ? null : details ? removePerson(details, input.id) : null])) as Entry["exceptions"];
+      // Keep surviving exceptions as independent events if their parent series is removed.
+      if (soleBase && !row.deletedAt) {
+        for (const [key, details] of Object.entries(exceptions)) {
+          if (!details) continue;
+          const retained = await tx.calendarEntry.create({ data: { id: randomUUID(), kind: row.kind, creatorId: row.creatorId, payload: { ...details, repeat: "NONE", until: "" } as unknown as Prisma.InputJsonValue } });
+          await tx.calendarAudit.create({ data: { actorId, recordId: retained.id, recordType: row.kind, changes: { action: "Retained occurrence", sourceSeries: row.id, occurrence: key, details: retained.payload } } });
+        }
+      }
+      const deletedAt = row.deletedAt ?? (soleBase ? new Date() : null);
+      const changed = await tx.calendarEntry.updateMany({ where: { id: row.id, revision: row.revision }, data: { payload: payload as unknown as Prisma.InputJsonValue, exceptions: exceptions as unknown as Prisma.InputJsonValue, deletedAt, revision: { increment: 1 } } });
+      if (changed.count !== 1) throw new Error("This event changed. Review the deletion again.");
+      await tx.calendarAudit.create({ data: { actorId, recordId: row.id, recordType: row.kind, changes: { action: "Person deleted", person: { id: person.id, name: person.name, color: person.color }, before: { payload: row.payload, exceptions: row.exceptions, deleted: !!row.deletedAt }, after: { payload: payload as unknown as Prisma.InputJsonValue, exceptions: exceptions as unknown as Prisma.InputJsonValue, deleted: !!deletedAt } } } });
+    }
+    await tx.calendarPerson.delete({ where: { id: input.id } });
+    await tx.calendarAudit.create({ data: { actorId, recordId: input.id, recordType: "person", changes: { action: "Deleted", before: { name: person.name, color: person.color, active: person.active }, affectedEntries: rows.length } } });
   }, { maxWait: 10_000, timeout: 30_000 });
 }
 export async function saveCalendarSetting(db: PrismaClient, actorId: string, input: { type: "person" | "category"; id: string; revision: number | null; name: string; color: string; active: boolean }) {
