@@ -5,6 +5,8 @@ import { OrderForm } from "../order-form";
 import { notFound } from "next/navigation";
 import { AuthenticatedShell } from "../../ui/authenticated-shell";
 import { terminalStatus } from "../../../lib/order-status";
+import { readOrderChoices } from "../../../lib/order-choice-store";
+import { choiceOptions } from "../../../lib/order-choice-policy";
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireApprovedUser();
@@ -13,8 +15,9 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const record = await getDatabase().salesOrder.findFirst({ where: { id, deletedAt: null }, select: { creatorId: true } });
   if (!record) notFound();
   const initial = await loadOrder(getDatabase(), id);
+  const options = choiceOptions(await readOrderChoices(getDatabase()));
   const users = await getDatabase().appUser.findMany({ where: { OR: [{ active: true }, { id: { in: initial.assigneeIds } }] }, select: { id: true, email: true, displayName: true, active: true }, orderBy: [{ displayName: "asc" }, { email: "asc" }] });
   const canSendEmail = user.role === "ADMIN" || record.creatorId === user.id;
   const pending = canSendEmail ? await getDatabase().orderEmail.findFirst({ where: { orderId: id, state: { not: "ACCEPTED" } }, select: { id: true }, orderBy: { createdAt: "desc" } }) : null;
-  return <AuthenticatedShell title="Sales Order" active={terminalStatus(initial.fields.status) ? "Completed Sales Orders" : "Sales Orders"} admin={user.role === "ADMIN"}><OrderForm key={initial.id} initial={initial} users={users} canSendEmail={canSendEmail} pendingEmailId={pending?.id} /></AuthenticatedShell>;
+  return <AuthenticatedShell title="Sales Order" active={terminalStatus(initial.fields.status) ? "Completed Sales Orders" : "Sales Orders"} admin={user.role === "ADMIN"}><OrderForm key={initial.id} initial={initial} users={users} choices={options} canSendEmail={canSendEmail} pendingEmailId={pending?.id} /></AuthenticatedShell>;
 }

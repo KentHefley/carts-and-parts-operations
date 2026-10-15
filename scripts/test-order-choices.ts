@@ -1,0 +1,82 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { developmentCredentials } from "./development-target";
+import { createDatabaseClient } from "../lib/database-client";
+import { changeOrderChoice, readOrderChoices } from "../lib/order-choice-store";
+import { choiceOptions, normalizeChoice, retainedChoice } from "../lib/order-choice-policy";
+import { reserveOrder, saveOrder, loadOrder, copyOrder } from "../lib/order-store";
+
+async function main() {
+  const { databaseUrl } = developmentCredentials();
+  const db = createDatabaseClient(databaseUrl);
+  const admin = randomUUID(), user = randomUUID();
+  const label = `Choice test ${randomUUID()}`;
+  const ids: string[] = [];
+  try {
+    await db.appUser.createMany({ data: [admin, user].map(id => ({ id, clerkUserId: `choice-test-${id}`, email: `${id}@example.invalid`, role: id === admin ? "ADMIN" as const : "USER" as const })) });
+    await assert.rejects(changeOrderChoice(db, user, { fieldKey: "terms__1", label }), /Administrator/);
+    await assert.rejects(changeOrderChoice(db, admin, { fieldKey: "status", label }), /supported field/);
+    await assert.rejects(changeOrderChoice(db, admin, { fieldKey: "terms__1", label: "  " }), /1–100/);
+    const concurrent = await Promise.allSettled([label, label.toUpperCase().replaceAll(" ", "  ")].map(value => changeOrderChoice(db, admin, { fieldKey: "terms__1", label: value })));
+    assert.equal(concurrent.filter(result => result.status === "fulfilled").length, 1);
+    let choice = await db.orderChoice.findUniqueOrThrow({ where: { fieldKey_normalizedLabel: { fieldKey: "terms__1", normalizedLabel: normalizeChoice(label) } } });
+    await changeOrderChoice(db, admin, { fieldKey: "terms__1", label: `${label} inactive gap` });
+    await changeOrderChoice(db, admin, { fieldKey: "terms__1", label: `${label} neighbor` });
+    const gap = await db.orderChoice.findUniqueOrThrow({ where: { fieldKey_normalizedLabel: { fieldKey: "terms__1", normalizedLabel: normalizeChoice(`${label} inactive gap`) } } });
+    await changeOrderChoice(db, admin, { id: gap.id, version: gap.version, active: false });
+    let neighbor = await db.orderChoice.findUniqueOrThrow({ where: { fieldKey_normalizedLabel: { fieldKey: "terms__1", normalizedLabel: normalizeChoice(`${label} neighbor`) } } });
+    const movement = { id: choice.id, version: choice.version, neighborId: neighbor.id, neighborVersion: neighbor.version, direction: "down" as const };
+    await assert.rejects(changeOrderChoice(db, user, movement), /Administrator/);
+    const moves = await Promise.allSettled([changeOrderChoice(db, admin, movement), changeOrderChoice(db, admin, movement)]);
+    assert.equal(moves.filter(result => result.status === "fulfilled").length, 1);
+    assert.deepEqual(choiceOptions(await readOrderChoices(db)).terms__1.slice(-2), [neighbor.label, choice.label]);
+    await assert.rejects(changeOrderChoice(db, admin, movement), /order changed/);
+    choice = await db.orderChoice.findUniqueOrThrow({ where: { id: choice.id } });
+    neighbor = await db.orderChoice.findUniqueOrThrow({ where: { id: neighbor.id } });
+    await assert.rejects(changeOrderChoice(db, admin, { ...movement, version: choice.version, neighborVersion: neighbor.version }), /order changed/); // Already last.
+    await assert.rejects(changeOrderChoice(db, admin, { ...movement, version: choice.version, neighborId: gap.id, neighborVersion: gap.version, direction: "up" }), /order changed/);
+    await changeOrderChoice(db, admin, { id: choice.id, version: choice.version, neighborId: neighbor.id, neighborVersion: neighbor.version, direction: "up" });
+    assert.deepEqual(choiceOptions(await readOrderChoices(db)).terms__1.slice(-2), [choice.label, neighbor.label]);
+    choice = await db.orderChoice.findUniqueOrThrow({ where: { id: choice.id } });
+    assert.ok(choiceOptions(await readOrderChoices(db)).terms__1.includes(choice.label));
+    let order = await reserveOrder(db, user, randomUUID()); ids.push(order.id);
+    let result = await saveOrder(db, user, { id: order.id, base: order.fields, patch: { name: "Synthetic dropdown choice check", terms__1: choice.label } });
+    assert.equal(result.ok, true); if (!result.ok) throw new Error("Expected a successful save"); order = result.order;
+    await changeOrderChoice(db, admin, { id: choice.id, active: false, version: choice.version });
+    const auditCount = await db.orderChoiceAudit.count({ where: { choiceId: choice.id } });
+    await changeOrderChoice(db, admin, { id: choice.id, active: false, version: choice.version });
+    assert.equal(await db.orderChoiceAudit.count({ where: { choiceId: choice.id } }), auditCount);
+    assert.equal((await loadOrder(db, order.id)).fields.terms__1, choice.label);
+    assert.equal(retainedChoice(choiceOptions(await readOrderChoices(db)).terms__1, choice.label), true);
+    result = await saveOrder(db, user, { id: order.id, base: order.fields, patch: { terms__1: choice.label, text_28__1: "Retained inactive choice" } });
+    assert.equal(result.ok, true); if (!result.ok) throw new Error("Expected a successful save"); order = result.order;
+    const copied = await copyOrder(db, user, order, randomUUID());
+    assert.equal(copied.ok, true); if (!copied.ok) throw new Error("Expected a successful copy"); ids.push(copied.order.id);
+    assert.equal(copied.order.fields.terms__1, choice.label);
+    assert.equal(copied.order.fields.division__1, "");
+    let fresh = await reserveOrder(db, user, randomUUID()); ids.push(fresh.id);
+    result = await saveOrder(db, user, { id: fresh.id, base: fresh.fields, patch: { name: "New choice check", terms__1: choice.label } });
+    assert.equal(result.ok, false);
+    result = await saveOrder(db, user, { id: fresh.id, base: fresh.fields, patch: { name: "New choice check", terms__1: "Unrecognized arbitrary option" } });
+    assert.equal(result.ok, false);
+    await assert.rejects(changeOrderChoice(db, admin, { id: choice.id, active: true, version: choice.version }), /changed/);
+    await assert.rejects(changeOrderChoice(db, admin, { fieldKey: "terms__1", label }), /inactive/);
+    await changeOrderChoice(db, admin, { id: choice.id, active: true, version: choice.version + 1 });
+    result = await saveOrder(db, user, { id: fresh.id, base: fresh.fields, patch: { name: "New choice check", terms__1: choice.label } });
+    assert.equal(result.ok, true); if (!result.ok) throw new Error("Expected a successful save"); fresh = result.order;
+    await db.appUser.update({ where: { id: admin }, data: { active: false } });
+    await assert.rejects(changeOrderChoice(db, admin, { fieldKey: "terms__1", label: `${label} blocked` }), /Administrator/);
+    console.log("Dropdown checks passed: permissions, concurrent duplicate prevention, active selection, inactive retention/copy, new inactive/unknown rejection, stale and repeated edits, reactivation, audit.");
+  } finally {
+    await db.notification.deleteMany({ where: { OR: [{ orderId: { in: ids } }, { recipientId: { in: [admin, user] } }, { actorId: { in: [admin, user] } }] } });
+    await db.orderAssignment.deleteMany({ where: { orderId: { in: ids } } });
+    await db.orderEvent.deleteMany({ where: { orderId: { in: ids } } });
+    await db.orderItem.deleteMany({ where: { orderId: { in: ids } } });
+    await db.salesOrder.deleteMany({ where: { id: { in: ids } } });
+    await db.orderChoiceAudit.deleteMany({ where: { actorId: { in: [admin, user] } } });
+    await db.orderChoice.deleteMany({ where: { fieldKey: "terms__1", normalizedLabel: { startsWith: normalizeChoice(label) } } });
+    await db.appUser.deleteMany({ where: { id: { in: [admin, user] } } });
+    await db.$disconnect();
+  }
+}
+main().catch(error => { console.error(error instanceof Error ? error.message : "Dropdown check failed."); process.exitCode = 1; });

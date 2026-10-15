@@ -12,6 +12,7 @@ import { sendSOEmail } from "./email-actions";
 import { EmailToast } from "./email-toast";
 import { DeleteOrderButton } from "./delete-order-button";
 import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { type ChoiceOptions, managedChoice, retainedChoice } from "../../lib/order-choice-policy";
 
 const sections = ["Order Overview", "Billing and Store Information", "Items and Pricing", "Additional Information", "Completion", "Service and Labor"];
 const invoiceStorePairs = [
@@ -29,7 +30,7 @@ function revealCloseout(fields: Record<string, string>) {
   const input = fields.text_79__1?.trim() ? section?.querySelector<HTMLButtonElement>(".date-field") : document.getElementById("closed-out-by");
   input?.focus({ preventScroll: true });
 }
-export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId }: { initial: OrderView; users: AssignableUser[]; canSendEmail?: boolean; pendingEmailId?: string }) {
+export function OrderForm({ initial, users, choices = {}, canSendEmail = false, pendingEmailId }: { initial: OrderView; users: AssignableUser[]; choices?: ChoiceOptions; canSendEmail?: boolean; pendingEmailId?: string }) {
   const router = useRouter();
   const [fields, setFields] = useState(initial.fields);
   const [sameAsInvoice, setSameAsInvoice] = useState(false);
@@ -210,7 +211,7 @@ export function OrderForm({ initial, users, canSendEmail = false, pendingEmailId
           <small id="invoice-copy-help">Copies Invoice name, address, city, state, ZIP and phone into Store fields, replacing their current values. You can edit them afterward. Unchecking keeps the copied values.</small>
         </div>}
         <label>{field.label}
-          {field.options ? <select value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)}><option value="">—</option>{field.options.map(option => <option key={option}>{option}</option>)}</select>
+          {field.options ? <select value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)}><option value="">—</option>{retainedChoice(managedChoice(field.key) ? choices[field.key] ?? [] : field.options, fields[field.key] ?? "") && <option value={fields[field.key]} disabled>{fields[field.key]} (saved value; unavailable for new selections)</option>}{(managedChoice(field.key) ? choices[field.key] ?? [] : field.options).map(option => <option key={option}>{option}</option>)}</select>
             : field.type === "date" ? <DateField label={field.label} value={fields[field.key] ?? ""} onChange={value => update(field.key, value)} />
             : field.type === "textarea" ? <textarea value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />
               : <input type={field.type} step={field.type === "number" ? "any" : undefined} value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />}

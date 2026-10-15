@@ -3,6 +3,7 @@ import { fieldKeys, orderFields } from "./order-fields";
 import { chicagoDate, conflicts, ItemValue, OrderView, SaveRequest } from "./order-types";
 import { notifyOrderChange } from "./notification-store";
 import { missingCloseout, orderStatuses, protectedStatusFields, terminalStatus } from "./order-status";
+import { managedChoice } from "./order-choice-policy";
 
 const include = { items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true, displayName: true } }, assignments: { orderBy: { userId: "asc" as const } } };
 type StoredOrder = Prisma.SalesOrderGetPayload<{ include: typeof include }>;
@@ -83,7 +84,7 @@ function validateFields(fields: Record<string, string>) {
     if (protectedStatusFields.includes(key)) throw new InputError("Completion and void details are recorded automatically and cannot be edited.");
     if (!fieldKeys.has(key) || typeof value !== "string" || value.length > 10_000) throw new InputError("Invalid field value.");
     const field = orderFields.find(field => field.key === key);
-    if (field?.options && value && !field.options.includes(value)) throw new InputError(`Invalid ${field.label}.`);
+    if (field?.options && !managedChoice(key) && value && !field.options.includes(value)) throw new InputError(`Invalid ${field.label}.`);
     if (key === "status" && !orderStatuses.includes(value)) throw new InputError("Invalid status.");
     if ((key === "dateEntered" || field?.type === "date") && value) {
       const date = new Date(value + "T00:00:00Z");
@@ -108,10 +109,16 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
     throw error;
   }
   return database.$transaction(async transaction => {
+    if (Object.keys(request.patch).some(managedChoice)) await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('order-dropdown-choices'))`;
     await transaction.$queryRaw`SELECT id FROM "SalesOrder" WHERE id = ${request.id}::uuid FOR UPDATE`;
     const order = await transaction.salesOrder.findUniqueOrThrow({ where: { id: request.id }, include });
     if (order.deletedAt) return { ok: false as const, message: "This order is in Trash and cannot be edited." };
     const current = orderView(order);
+    for (const [key, value] of Object.entries(request.patch)) {
+      if (!managedChoice(key) || !value || value === (current.fields[key] ?? "")) continue;
+      const available = await transaction.orderChoice.findFirst({ where: { fieldKey: key, label: value, active: true } });
+      if (!available) return { ok: false as const, message: `${orderFields.find(field => field.key === key)?.label}: that choice is no longer available. Reload saved values to get the current choices, then select an active choice.` };
+    }
     const patch = { ...request.patch };
     if (request.closeoutMode === "quick") {
       if (current.fields.status === patch.status) {

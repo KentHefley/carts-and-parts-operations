@@ -387,8 +387,23 @@ tbody tr:hover { background:var(--soft); }
  .calendar-dialog { padding:14px; }
 }
 .user-access-card { margin-block: 1rem; }
+.user-management-group { margin-block:2rem; }
+.user-management-group > h2 { padding-bottom:10px; border-bottom:1px solid var(--line); }
 .user-access-fields { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; margin-block: 1rem; }
 .user-access-fields label { display: flex; align-items: center; gap: .6rem; }
 .user-access-fields select { min-width: 8rem; }
 .user-access-fields input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--blue); }
 .user-delete-controls { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+
+.choice-settings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin:24px 0; }
+.choice-section { min-width:0; align-self:start; }
+.choice-add { display:flex; align-items:end; flex-wrap:wrap; gap:12px; margin:16px 0; }
+.choice-add label { flex:1; min-width:160px; }
+.choice-list { list-style:none; padding:0; margin:16px 0; }
+.choice-list li { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
+.choice-list li div { min-width:0; overflow-wrap:anywhere; }
+.choice-list li span { display:block; font-size:13px; color:var(--muted); }
+@media(max-width:800px) { .choice-settings { grid-template-columns:1fr; } }
+.choice-row-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; flex-shrink:0; }
+.choice-row-actions button { padding:7px 10px; font-size:13px; }
+@media(max-width:1100px) { .choice-list li { flex-wrap:wrap; } .choice-row-actions { width:100%; justify-content:flex-start; } }
