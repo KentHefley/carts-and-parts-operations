@@ -36,6 +36,9 @@ test("partially filled items and zero quantities retain their original row numbe
 });
 test("development recipient policy rejects empty/mixed lists without redirecting", () => {
   assert.doesNotThrow(() => verifyEmailRecipients(["KENT@CARTSANDPARTS.COM"]));
+  assert.doesNotThrow(() => verifyEmailRecipients(["kent@cartsandparts.com", "jleo3140@gmail.com", "augustforum@gmail.com", "hefleykent@gmail.com"]));
+  assert.throws(() => verifyEmailRecipients(["other@orders.cartsandparts.com"]));
+  assert.throws(() => verifyEmailRecipients(["kent@cartsandparts.com.evil.invalid"]));
   assert.throws(() => verifyEmailRecipients([]));
   assert.throws(() => verifyEmailRecipients(["kent@cartsandparts.com", "other@example.invalid"]));
 });

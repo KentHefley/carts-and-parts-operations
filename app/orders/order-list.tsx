@@ -1,15 +1,17 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { activeStatuses, terminalStatuses } from "../../lib/order-status";
 import type { ListOperation, ListOperationResult } from "../../lib/order-list-operation";
 import { applyOrderListAction } from "./list-actions";
 import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { startOrderListRefresh } from "../../lib/order-list-refresh";
 type Row = { id: string; number: string; name: string; status: string; division: string; jobType: string; scheduled: string; assigned: string; canDelete: boolean };
 type Outcome = { id: string; number: string; result: ListOperationResult };
 export function OrderList({ orders, completed = false, admin = false }: { orders: Row[]; completed?: boolean; admin?: boolean }) {
   const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
   const [name, setName] = useState("");
   const [number, setNumber] = useState("");
   const [status, setStatus] = useState("");
@@ -26,6 +28,10 @@ export function OrderList({ orders, completed = false, admin = false }: { orders
   const allSelected = rows.length > 0 && selectedRows.length === rows.length;
   const mayTrash = selectedRows.length > 0 && selectedRows.every(order => order.canDelete);
   const maySelect = !completed || admin;
+  useEffect(() => {
+    if (busy || confirmTrash || refreshing) return;
+    return startOrderListRefresh(() => startRefresh(() => router.refresh()), () => working.current);
+  }, [router, busy, confirmTrash, refreshing]);
   useEffect(() => {
     if (!busy) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();

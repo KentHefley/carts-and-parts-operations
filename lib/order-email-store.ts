@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from "../generated/prisma/client";
 import { orderView } from "./order-store";
 import { orderEmailTemplate } from "./order-email-template";
-import { deliverEmail, developmentSender, emailConfiguration, EmailPayload, verifyEmailRecipients } from "./email-config";
+import { deliverEmail, developmentSender, developmentReplyTo, emailConfiguration, EmailPayload, verifyEmailRecipients } from "./email-config";
 import type { OrderView } from "./order-types";
 
 export class EmailInputError extends Error {}
@@ -36,7 +36,7 @@ export async function queueOrderEmail(database: PrismaClient, actorId: string, e
     if (order.assignments.some(assignment => !assignment.user.active)) throw new EmailInputError("Remove inactive assignees before sending email.");
     const to = [...new Set(order.assignments.map(assignment => assignment.user.email.toLowerCase()))];
     verifyEmailRecipients(to);
-    const payload = { from: developmentSender, to, ...orderEmailTemplate(view) };
+    const payload = { from: developmentSender, reply_to: developmentReplyTo, to, ...orderEmailTemplate(view) };
     const message = await transaction.orderEmail.create({ data: { actorId, orderId: order.id, requestKey, payload } });
     await transaction.orderEvent.create({ data: { actorId, orderId: order.id, changes: { event: "SO email queued", recipients: to.join(", ") } } });
     return message.id;

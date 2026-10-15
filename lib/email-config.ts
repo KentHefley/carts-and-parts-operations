@@ -1,11 +1,13 @@
-export type EmailPayload = { from: string; to: string[]; subject: string; text: string; html: string };
+export type EmailPayload = { from: string; to: string[]; reply_to?: string; subject: string; text: string; html: string };
 export const developmentRecipient = "kent@cartsandparts.com";
-export const developmentSender = "Carts and Parts Operations <onboarding@resend.dev>";
+export const developmentSender = "Carts and Parts Operations <sales-orders@orders.cartsandparts.com>";
+export const developmentReplyTo = "kent@cartsandparts.com";
+const developmentRecipients = new Set([developmentRecipient, "jleo3140@gmail.com", "augustforum@gmail.com", "hefleykent@gmail.com"]);
 export class EmailPolicyError extends Error {}
 
 export function verifyEmailRecipients(recipients: string[]) {
-  if (!recipients.length || recipients.some(email => email.toLowerCase() !== developmentRecipient)) {
-    throw new EmailPolicyError("Development email can only be sent to kent@cartsandparts.com. Remove other assignees to test; nobody is redirected.");
+  if (!recipients.length || recipients.some(email => !developmentRecipients.has(email.toLowerCase()))) {
+    throw new EmailPolicyError("Development email can only be sent to approved test recipients. Remove other assignees to test; nobody is redirected.");
   }
 }
 export function emailConfiguration() {

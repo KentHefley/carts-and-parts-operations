@@ -4,7 +4,7 @@ import { developmentCredentials } from "./development-target";
 import { createDatabaseClient } from "../lib/database-client";
 import { reserveOrder, saveOrder, loadOrder } from "../lib/order-store";
 import { queueOrderEmail, sendQueuedEmail } from "../lib/order-email-store";
-import { developmentRecipient } from "../lib/email-config";
+import { developmentRecipient, developmentSender, developmentReplyTo } from "../lib/email-config";
 
 async function main() {
   const { databaseUrl } = developmentCredentials();
@@ -26,6 +26,10 @@ async function main() {
     const requestKey = randomUUID();
     const [first, repeated] = await Promise.all([queueOrderEmail(database, kent.id, order, requestKey), queueOrderEmail(database, kent.id, order, requestKey)]);
     assert.equal(first, repeated);
+    const queued = await database.orderEmail.findUniqueOrThrow({ where: { id: first } });
+    const queuedPayload = queued.payload as { from: string; reply_to: string };
+    assert.equal(queuedPayload.from, developmentSender);
+    assert.equal(queuedPayload.reply_to, developmentReplyTo);
     let calls = 0;
     let release!: () => void;
     let started!: () => void;
