@@ -103,3 +103,6 @@ October 13 update to deferred management roster: Kent approved adding arbitrary 
 October 15 dropdown implementation: immutable labels and additive choices preserve text-valued historical mappings. Admin deactivation/reactivation controls future selection; no hard delete or bulk relabeling. Order save validation serializes with settings changes and permits unchanged historical choices. No defaults are automatically selected.
 
 October 15 approved dropdown ordering: provide Move Up/Move Down controls for active choices in all four supported fields. Ordering is persisted for everyone and audited; no labels or saved order values change. Inactive entries are skipped by the controls.
+
+October 15 comments notification decision resolved: Kent approved new-comment bell alerts only; edits/deletions generate audit records but no new bell alert. Mention recipients receive a distinct alert without a duplicate general comment alert. No comment emails.
+October 15 comment-recipient correction: general new-comment bell alerts go only to active order assignees, excluding the actor. Explicit active-user mentions retain targeted alerts even when unassigned. No duplicate general/mention alerts. No change to field/file notification rules.

@@ -30,6 +30,7 @@ model AppUser {
   notifications Notification[] @relation("Recipient")
   sentNotifications Notification[] @relation("Actor")
   emails OrderEmail[]
+  comments OrderComment[]
   attachments OrderAttachment[]
   priceBookFiles PriceBookFile[]
   priceBookEvents PriceBookEvent[]
@@ -109,6 +110,7 @@ model SalesOrder {
   notifications Notification[]
   emails OrderEmail[]
   attachments OrderAttachment[]
+  comments OrderComment[]
   @@unique([creatorId, requestKey])
   @@index([deletedAt, purgeAfter, purgedAt])
 }
@@ -122,6 +124,25 @@ model OrderItem {
   quantity    Decimal? @db.Decimal(20, 6)
   unitPrice   Decimal? @db.Decimal(20, 2)
   @@unique([orderId, position])
+}
+
+model OrderComment {
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @db.Uuid
+  authorId String @db.Uuid
+  authorName String
+  requestKey String @db.Uuid
+  requestHash String
+  text String
+  mentions Json @default("[]")
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  editedAt DateTime?
+  deletedAt DateTime?
+  order SalesOrder @relation(fields: [orderId], references: [id])
+  author AppUser @relation(fields: [authorId], references: [id])
+  @@unique([orderId, authorId, requestKey])
+  @@index([orderId, deletedAt, createdAt])
 }
 
 model OrderEvent {

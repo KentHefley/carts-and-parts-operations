@@ -1,0 +1,9 @@
+# Order comments and Updates
+
+Approved next milestone: order-specific Updates tab, plain-text comments, selected active-user mentions, author/time and edited indicator. All approved users may post/view; author/admin alone may edit/delete. New comments notify active assignees and explicitly mentioned active users exactly once: mentioned employees receive a mention alert instead of a general comment alert. No email. Kent approved no new bell alerts for edits/deletions; audit all actions and preserve original authorship/text/revisions.
+
+Implement related comment records with version checks, durable creation request keys and same-order transaction locks. Individual deletion removes content from Updates permanently while retaining revision text in immutable order history; tombstones prevent repeated creation from resurrecting comments. Trash hides comments; restoration retains them; expiry purge removes comments and detailed audit with the order. Copies do not include comments.
+
+Initial limits: 10,000 characters, at most 100 distinct active mentions, 50 comments per page newest-first. Mentions are selected explicitly by employee name rather than inferred from free text. Render plain text safely. Refresh Comments fetches newer content while preserving current draft state; no autosaving or automatic notification emails.
+
+Acceptance checks: view/post authorization; own/admin edit/delete; wrong-order IDs; stale edits/deletion; repeated/concurrent creation deduplication; one bell per active recipient, mention-specific kind and actor excluded; no edit/delete alerts; escaped display; revised text in audit; Trash/restore/purge/copy behavior; pagination; composer error preservation; keyboard delete confirmation. Run guarded synthetic database tests, focused lint, TypeScript, browser checks and production build. Apply additive migration only to verified development.

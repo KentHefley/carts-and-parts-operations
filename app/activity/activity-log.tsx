@@ -5,7 +5,7 @@ import { orderFields } from "../../lib/order-fields";
 import { activityValue, itemHistoryRows } from "../../lib/activity-format";
 
 function label(key: string) {
-  return orderFields.find(field => field.key === key)?.label ?? ({ name: "Name", dateEntered: "Date Entered", status: "Status", items: "Item rows", assignments: "Assigned To", completedBy: "Completed By", completionDate: "Completion Date", voidedBy: "Voided By", voidedDate: "Voided Date", statusChangedAt: "Status changed at", event: "Event" } as Record<string, string>)[key] ?? key;
+  return orderFields.find(field => field.key === key)?.label ?? ({ name: "Name", dateEntered: "Date Entered", status: "Status", items: "Item rows", assignments: "Assigned To", completedBy: "Completed By", completionDate: "Completion Date", voidedBy: "Voided By", voidedDate: "Voided Date", statusChangedAt: "Status changed at", event: "Event", comment: "Comment", commentAuthor: "Comment Author", mentions: "Mentioned Users" } as Record<string, string>)[key] ?? key;
 }
 function changeDetails(key: string, change: unknown, names: Map<string, string>) {
   if (change && typeof change === "object" && "before" in change && "after" in change) {
@@ -25,7 +25,7 @@ export async function ActivityLog({ orderId, cursor, dashboard = false }: { orde
     <ol className="activity-list">{events.map(event => <li key={event.id}>
       {!orderId && <p><Link href={`/orders/${event.order.id}`}>DEV-{String(event.order.number).padStart(6, "0")} · {event.order.name}</Link></p>}
       <strong>{event.actor.displayName || event.actor.email}</strong> · <time dateTime={event.createdAt.toISOString()}>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" }).format(event.createdAt)} UTC</time>
-      <dl>{Object.entries(event.changes as Record<string, unknown>).map(([key, change]) => <div key={key}><dt>{label(key)}</dt><dd>{changeDetails(key, change, names)}</dd></div>)}</dl>
+      <dl>{Object.entries(event.changes as Record<string, unknown>).filter(([key]) => key !== "commentId").map(([key, change]) => <div key={key}><dt>{label(key)}</dt><dd>{changeDetails(key, change, names)}</dd></div>)}</dl>
     </li>)}</ol>
     <nav aria-label="Activity pages">{cursor && <Link href={path}>Newest activity</Link>} {nextCursor && <Link href={`${path}?before=${nextCursor}`}>Older activity</Link>} {dashboard && <Link href="/activity">Open dashboard activity</Link>}</nav>
   </section>;

@@ -249,8 +249,8 @@ tbody tr:hover { background:var(--soft); }
   .panel-heading { flex-wrap:wrap; }
 }
 
-.order-tabs { display:flex; align-items:center; gap:0; }
-.order-tabs a,.order-tabs button { display:inline-block; padding:9px 14px; border:0; border-bottom:3px solid transparent; border-radius:0; background:transparent; color:var(--muted); font-size:14px; font-weight:500; }
+.order-tabs { display:flex; flex-wrap:wrap; align-items:center; gap:0; }
+.order-tabs a,.order-tabs button { display:inline-block; white-space:nowrap; padding:9px 14px; border:0; border-bottom:3px solid transparent; border-radius:0; background:transparent; color:var(--muted); font-size:14px; font-weight:500; }
 .order-tabs a:hover { color:var(--blue); text-decoration:none; }
 .order-tabs .is-active { border-bottom-color:var(--blue); background:var(--selected); color:var(--blue); }
 .assignment-actions { display:flex; align-items:flex-start; gap:18px; margin-top:16px; }
@@ -407,3 +407,22 @@ tbody tr:hover { background:var(--soft); }
 .choice-row-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; flex-shrink:0; }
 .choice-row-actions button { padding:7px 10px; font-size:13px; }
 @media(max-width:1100px) { .choice-list li { flex-wrap:wrap; } .choice-row-actions { width:100%; justify-content:flex-start; } }
+.comments-heading, .comment-list header { display:flex; align-items:start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+.comment-form { margin-block:20px; }
+.comment-form textarea { min-height:110px; width:100%; margin-top:6px; }
+.comment-form > label { font-weight:650; }
+.comment-mention-picker { margin-block:16px; }
+.comment-mention-picker summary { cursor:pointer; padding-block:8px; }
+.comment-mention-options { max-height:220px; overflow:auto; margin-block:12px; }
+.comment-mention-options label { display:flex; align-items:center; gap:10px; padding-block:8px; }
+.comment-mention-options input[type="checkbox"] { width:18px; height:18px; margin:0; flex-shrink:0; }
+.comment-mention-chips { display:flex; flex-wrap:wrap; gap:8px; list-style:none; padding:0; margin-block:12px; }
+.comment-mention-chips li { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:20px; padding:4px 8px 4px 12px; }
+.comment-mention-chips button { padding:0 7px; min-width:28px; min-height:28px; }
+.comment-list { list-style:none; padding:0; margin-block:24px; }
+.comment-list > li { margin-block:16px; }
+.comment-list header p { margin-block:4px; color:var(--muted); font-size:13px; }
+.comment-text { white-space:pre-wrap; overflow-wrap:anywhere; }
+.comment-mentions { color:var(--muted); font-size:14px; overflow-wrap:anywhere; }
+.comment-actions, .comment-pages { display:flex; flex-wrap:wrap; gap:10px; margin-block:12px; }
+.activity-list dd { white-space:pre-wrap; overflow-wrap:anywhere; }

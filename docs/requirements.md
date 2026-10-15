@@ -102,7 +102,8 @@ Restoration retains the order's previous status and assignments. Flag assigned u
 ## Notifications, comments and audit
 
 - Assignment generates a bell notification, never an email.
-- Order field changes, new comments and file uploads/deletions notify all other active users; exclude the actor.
+- Order field changes and file uploads/deletions notify all other active users; exclude the actor.
+- New comments notify active assignees and explicitly mentioned active users only; exclude the actor. Mentioned users receive one mention alert instead of a duplicate general comment alert.
 - Group nearby edits into one bell notification while logging each saved change.
 - October 8: use rolling 60-second grouping for unread edits to the same order by the same actor. Newly assigned users receive a distinct assignment alert. Retain notifications until an explicit cleanup policy is agreed; reading an alert starts a fresh group for later edits.
 - Comments support mentions of active users. Mention recipients get targeted bell notifications without email and without duplicate general comment alerts.
@@ -202,3 +203,5 @@ October 15 dropdown settings implemented: admins manage Terms, Freight-Shipping,
 October 15 dropdown ordering: admins can move active choices up/down within each supported field. The persisted order applies to all users' dropdowns when opened/reloaded. Skip inactive choices when moving, disable first/last boundary controls, preserve labels and existing order values, and audit movements. Reject stale/repeated requests rather than applying a second unintended movement.
 
 October 15 User Management: group Admins above Users. Alphabetize by surname where available using the last word of the stored display name, with email fallback. Preserve existing permission, active/inactive, invitation and deletion behavior.
+
+October 15 comments implemented: Updates tab supports plain-text comments and explicit active-user mentions. Only new comments generate bell alerts: mentioned users receive a distinct mention alert instead of a duplicate general alert; active assignees except the actor receive the general comment alert. Unassigned employees receive no general comment alert; explicit mentions retain their targeted alert. Kent approved audit-only edits/deletions with no additional bell alerts. Authors/admins edit/delete; immutable order history retains original authorship, text and revisions. Individual deletion has no restore. Comments are retained through order Trash/restore, removed during expired whole-order purge, and excluded from copies.

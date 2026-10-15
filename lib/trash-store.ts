@@ -84,6 +84,7 @@ export async function purgeExpiredOrders(db: PrismaClient, storage: AttachmentSt
         // File metadata survives every storage failure, so future attempts can retry all keys.
         await tx.orderAttachment.deleteMany({ where: { orderId: entry.id } });
         await tx.orderEmail.deleteMany({ where: { orderId: entry.id } });
+        await tx.orderComment.deleteMany({ where: { orderId: entry.id } });
         await tx.notification.deleteMany({ where: { orderId: entry.id } });
         await tx.orderAssignment.deleteMany({ where: { orderId: entry.id } });
         await tx.orderItem.deleteMany({ where: { orderId: entry.id } });
