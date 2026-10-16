@@ -1,5 +1,7 @@
 # Development maintenance setup
 
+October 15 custom-field migrations: `20261015030000_order_field_layout` adds versioned layout/configuration audit; `20261015040000_custom_field_amounts` adds related exact decimal currency values with order-delete cascade. Both applied only through the guarded development migration script. Expired order purge explicitly removes decimal values while retaining its minimal order tombstone. No live migrations or deployment performed.
+
 No live launch or deployment is authorized by this document. Storage currently fails closed unless it matches the verified development Neon database, Clerk test keys and carts-parts-operations-development R2 bucket.
 
 ## Trash cleanup

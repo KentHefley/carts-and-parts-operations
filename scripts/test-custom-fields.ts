@@ -1,0 +1,103 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { developmentCredentials } from "./development-target";
+import { createDatabaseClient } from "../lib/database-client";
+import { deleteCustomField, lockFields, readFieldLayout, reviewFieldDeletion, saveFieldLayout } from "../lib/custom-field-store";
+import { customTypes, defaultLayout, displayCustom, type LayoutField } from "../lib/custom-field-model";
+import { reserveOrder, saveOrder, loadOrder, copyOrder } from "../lib/order-store";
+import { orderEmailTemplate } from "../lib/order-email-template";
+import { groupActivity } from "../lib/activity-grouping";
+
+async function main() {
+  const db = createDatabaseClient(developmentCredentials().databaseUrl);
+  const admin = randomUUID(), user = randomUUID(), inactive = randomUUID();
+  const orderIds: string[] = [], keys: string[] = [];
+  let originalVersion = 0;
+  try {
+    await db.appUser.createMany({ data: [admin, user, inactive].map(id => ({ id, clerkUserId: `custom-test-${id}`, email: `${id}@example.invalid`, displayName: `Field Test ${id}`, role: id === admin ? "ADMIN" as const : "USER" as const, active: id !== inactive })) });
+    let layout = await readFieldLayout(db); originalVersion = layout.version;
+    const definitions: LayoutField[] = customTypes.map(type => ({ key: `custom_${randomUUID()}`, label: `Synthetic ${type}`, section: "Order Overview", type, help: "Synthetic help", options: type === "select" ? ["One", "Two"] : [], active: true, custom: true, used: false, revision: 1 }));
+    const unused: LayoutField = { ...definitions[0], key: `custom_${randomUUID()}`, label: "Unused synthetic field" };
+    definitions.push(unused);
+    keys.push(...definitions.map(field => field.key));
+    const next = { ...layout, fields: [...layout.fields, ...definitions] };
+    await assert.rejects(saveFieldLayout(db, user, next), /Administrator/);
+    layout = await saveFieldLayout(db, admin, next);
+    const key = (type: string) => definitions.find(field => field.type === type)!.key;
+    const versions = () => Object.fromEntries(layout.fields.filter(field => field.custom).map(field => [field.key, field.revision]));
+    let order = await reserveOrder(db, user, randomUUID()); orderIds.push(order.id);
+    const saved = await saveOrder(db, user, { id: order.id, base: order.fields, patch: { name: "Synthetic custom-field check", [key("text")]: "Keep original", [key("textarea")]: "Notes\nsecond line", [key("number")]: "2.5", [key("currency")]: "$1.005", [key("date")]: "2026-10-15", [key("time")]: "09:30", [key("select")]: "One", [key("checkbox")]: "false", [key("employees")]: JSON.stringify([admin]) }, fieldVersions: versions() });
+    assert.equal(saved.ok, true); if (!saved.ok) throw new Error("Expected successful save"); order = saved.order;
+    assert.equal(order.fields[key("currency")], "1.01");
+    assert.equal((await db.orderFieldAmount.findUniqueOrThrow({ where: { orderId_fieldKey: { orderId: order.id, fieldKey: key("currency") } } })).amount.toFixed(2), "1.01");
+    assert.equal(order.assigneeIds.length, 0);
+    assert.ok(!orderEmailTemplate(order).text.includes("Synthetic"));
+    const event = await db.orderEvent.findFirstOrThrow({ where: { orderId: order.id, changes: { path: [key("text"), "label"], equals: "Synthetic text" } } });
+    const changes = event.changes as Record<string, { label: string; before: string; after: string }>;
+    assert.equal(changes[key("text")].label, "Synthetic text");
+    layout = await readFieldLayout(db);
+    layout = await saveFieldLayout(db, admin, { ...layout, fields: layout.fields.map(field => field.key === unused.key ? { ...field, type: "currency", section: "Additional Information" } : field) });
+    const competing = { ...layout, fields: layout.fields.map(field => field.key === unused.key ? { ...field, help: "Concurrent settings check" } : field) };
+    const settingResults = await Promise.allSettled([saveFieldLayout(db, admin, competing), saveFieldLayout(db, admin, competing)]);
+    assert.equal(settingResults.filter(result => result.status === "fulfilled").length, 1);
+    layout = await readFieldLayout(db);
+    const moved = [...layout.fields], first = moved.findIndex(field => field.key === key("text")), second = moved.findIndex(field => field.key === key("textarea"));
+    [moved[first], moved[second]] = [moved[second], moved[first]];
+    layout = await saveFieldLayout(db, admin, { ...layout, fields: moved });
+    assert.ok(layout.fields.findIndex(field => field.key === key("textarea")) < layout.fields.findIndex(field => field.key === key("text")));
+    await assert.rejects(saveFieldLayout(db, admin, { ...layout, fields: layout.fields.map(field => field.key === key("text") ? { ...field, type: "number" } : field) }), /has been used/);
+    await assert.rejects(saveFieldLayout(db, admin, { ...layout, fields: layout.fields.filter(field => field.key !== "name") }), /separate deletion/);
+    await assert.rejects(saveFieldLayout(db, admin, { ...layout, fields: layout.fields.map(field => field.key === "status" ? { ...field, active: false } : field) }), /protected/);
+    const copy = await copyOrder(db, user, order, randomUUID()); assert.equal(copy.ok, true); if (!copy.ok) throw new Error("Expected successful copy"); orderIds.push(copy.order.id);
+    assert.equal(copy.order.fields[key("text")], "Keep original"); assert.equal(copy.order.fields[key("employees")], undefined);
+    assert.equal(copy.order.fields[key("currency")], "1.01");
+    assert.equal((await db.orderFieldAmount.findUniqueOrThrow({ where: { orderId_fieldKey: { orderId: copy.order.id, fieldKey: key("currency") } } })).amount.toFixed(2), "1.01");
+    for (const [type, value] of [["date", "2026-02-30"], ["time", "27:00"], ["number", "abc"], ["currency", "$no"], ["select", "Unknown"], ["checkbox", "yes"], ["employees", JSON.stringify([admin, admin])], ["employees", JSON.stringify([inactive])]]) {
+      const result = await saveOrder(db, user, { id: order.id, base: order.fields, patch: { [key(type)]: value }, fieldVersions: versions() }); assert.equal(result.ok, false, `Reject ${type}: ${value}`);
+    }
+    const countBefore = await db.notification.count({ where: { orderId: order.id } });
+    let result = await saveOrder(db, user, { id: order.id, base: order.fields, patch: { [key("employees")]: "" }, fieldVersions: versions() }); assert.equal(result.ok, true); if (!result.ok) throw new Error("Expected successful save"); order = result.order;
+    assert.equal(await db.notification.count({ where: { orderId: order.id } }), countBefore);
+    const oldVersions = versions();
+    const sharedBase = { ...order.fields };
+    const competingValues = await Promise.all(["First edit", "Second edit"].map(value => saveOrder(db, user, { id: order.id, base: sharedBase, patch: { [key("textarea")]: value }, fieldVersions: versions() })));
+    assert.equal(competingValues.filter(result => result.ok).length, 1);
+    assert.equal(competingValues.filter(result => !result.ok && result.conflict?.includes(key("textarea"))).length, 1);
+    order = await loadOrder(db, order.id);
+    const staleLayout = structuredClone(layout);
+    layout = await saveFieldLayout(db, admin, { ...layout, fields: layout.fields.map(field => field.key === key("text") ? { ...field, label: "Renamed synthetic text", active: false } : field) });
+    await assert.rejects(saveFieldLayout(db, admin, staleLayout), /Settings changed/);
+    result = await saveOrder(db, user, { id: order.id, base: order.fields, patch: { [key("text")]: "Blocked" }, fieldVersions: oldVersions }); assert.equal(result.ok, false);
+    assert.equal((await loadOrder(db, order.id)).fields[key("text")], "Keep original");
+    layout = await saveFieldLayout(db, admin, { ...layout, fields: layout.fields.map(field => field.key === key("text") ? { ...field, active: true } : field) });
+    const staleReview = await reviewFieldDeletion(db, admin, key("text")); assert.equal(staleReview.count, 2);
+    result = await saveOrder(db, user, { id: order.id, base: order.fields, patch: { [key("text")]: "Updated" }, fieldVersions: versions() }); assert.equal(result.ok, true); if (!result.ok) throw new Error("Expected successful save"); order = result.order;
+    await assert.rejects(deleteCustomField(db, admin, key("text"), staleReview.token), /changed/);
+    await db.salesOrder.update({ where: { id: copy.order.id }, data: { deletedAt: new Date(), purgeAfter: new Date(Date.now() + 86400000) } });
+    const review = await reviewFieldDeletion(db, admin, key("text")); assert.equal(review.count, 2);
+    await assert.rejects(deleteCustomField(db, user, key("text"), review.token), /Administrator/);
+    await deleteCustomField(db, admin, key("text"), review.token);
+    assert.equal((await loadOrder(db, order.id)).fields[key("text")], undefined);
+    assert.equal((await db.salesOrder.findUniqueOrThrow({ where: { id: copy.order.id } })).fields && ((await db.salesOrder.findUniqueOrThrow({ where: { id: copy.order.id } })).fields as Record<string, string>)[key("text")], undefined);
+    result = await saveOrder(db, user, { id: order.id, base: order.fields, patch: { [key("text")]: "Resurrect" }, fieldVersions: versions() }); assert.equal(result.ok, false);
+    const kept = await db.orderEvent.findUniqueOrThrow({ where: { id: event.id } }); assert.deepEqual(kept.changes, event.changes);
+    const currencyReview = await reviewFieldDeletion(db, admin, key("currency"));
+    await deleteCustomField(db, admin, key("currency"), currencyReview.token);
+    assert.equal(await db.orderFieldAmount.count({ where: { fieldKey: key("currency") } }), 0);
+    assert.equal(displayCustom(definitions.find(field => field.type === "employees")!, JSON.stringify([admin]), new Map([[admin, "Named Admin"]])), "Named Admin");
+    const grouped = groupActivity([{ ...event, createdAt: new Date(), changes: { [key("text")]: { label: "New label", before: "b", after: "c" } } }, { ...event, id: randomUUID(), createdAt: new Date(Date.now() - 1000), changes: { [key("text")]: { label: "Old label", before: "a", after: "b" } } }]);
+    assert.equal((grouped[0].changes as Record<string, { label: string }>)[key("text")].label, "New label");
+    console.log("Custom field checks passed: nine types, normalization, permissions, used-type protection, copies, notifications, stale settings/deletion, Trash values and immutable labeled history.");
+  } finally {
+    await db.notification.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { actorId: { in: [admin, user] } }, { recipientId: { in: [admin, user, inactive] } }] } });
+    await db.orderEvent.deleteMany({ where: { orderId: { in: orderIds } } });
+    await db.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
+    await db.salesOrder.deleteMany({ where: { id: { in: orderIds } } });
+    await db.orderFieldAudit.deleteMany({ where: { actorId: { in: [admin, user] } } });
+    await db.$transaction(async tx => { await lockFields(tx); const layout = await readFieldLayout(tx); const fields = layout.fields.filter(field => !keys.includes(field.key)); if (originalVersion === 0 && JSON.stringify(fields) === JSON.stringify(defaultLayout().fields)) await tx.orderFieldLayout.deleteMany({ where: { id: "orders" } }); else await tx.orderFieldLayout.update({ where: { id: "orders" }, data: { definitions: fields, version: { increment: 1 } } }); });
+    await db.appUser.deleteMany({ where: { id: { in: [admin, user, inactive] } } });
+    await db.$disconnect();
+  }
+}
+main().catch(error => { console.error(error instanceof Error ? error.message : "Custom field checks failed"); process.exitCode = 1; });
+

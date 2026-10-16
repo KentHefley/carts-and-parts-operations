@@ -4,12 +4,14 @@ import { chicagoDate, conflicts, ItemValue, OrderView, SaveRequest } from "./ord
 import { notifyOrderChange } from "./notification-store";
 import { missingCloseout, orderStatuses, protectedStatusFields, terminalStatus } from "./order-status";
 import { managedChoice } from "./order-choice-policy";
+import { FieldSettingsError, lockFields, readFieldLayout, validateCustomPatch, writeLayout } from "./custom-field-store";
+import { customKey } from "./custom-field-model";
 
-const include = { items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true, displayName: true } }, assignments: { orderBy: { userId: "asc" as const } } };
+const include = { customAmounts: true, items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true, displayName: true } }, assignments: { orderBy: { userId: "asc" as const } } };
 type StoredOrder = Prisma.SalesOrderGetPayload<{ include: typeof include }>;
 export function orderView(order: StoredOrder): OrderView {
   return { id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, creator: order.creator.displayName || order.creator.email,
-    fields: { ...(order.fields as Record<string, string>), name: order.name ?? "" }, assigneeIds: order.assignments.map(assignment => assignment.userId),
+    fields: { ...(order.fields as Record<string, string>), ...Object.fromEntries(order.customAmounts.map(value => [value.fieldKey, value.amount.toFixed(2)])), name: order.name ?? "" }, assigneeIds: order.assignments.map(assignment => assignment.userId),
     items: order.items.map(item => ({ description: item.description, quantity: item.quantity?.toString() ?? "", unitPrice: item.unitPrice?.toString() ?? "" })) };
 }
 
@@ -37,6 +39,7 @@ export async function copyOrder(database: PrismaClient, actorId: string, expecte
   if (!expected || !uuid.test(expected.id) || typeof requestKey !== "string" || !uuid.test(requestKey)) return { ok: false as const, message: "Invalid copy request." };
   return database.$transaction(async transaction => {
     // Serialize repeated attempts from this user without allocating extra numbers.
+    await lockFields(transaction);
     await transaction.$queryRaw`SELECT id FROM "AppUser" WHERE id = ${actorId}::uuid FOR UPDATE`;
     const actor = await transaction.appUser.findUnique({ where: { id: actorId } });
     if (!actor?.active) return { ok: false as const, message: "Active approved access is required to copy an order." };
@@ -57,11 +60,14 @@ export async function copyOrder(database: PrismaClient, actorId: string, expecte
       return { ok: false as const, message: "This order changed before it could be copied. Reload saved values, review the changes, and try again." };
     }
     const { name, ...fields } = current.fields;
+    const layout = await readFieldLayout(transaction);
+    for (const field of layout.fields) if (field.custom && (field.type === "employees" || field.deleted)) delete fields[field.key];
     for (const key of ["division__1", "text_28__1", "start_job_date__1", "text_79__1", "closed_out_date4__1", "voidReason", ...protectedStatusFields]) fields[key] = "";
     fields.status = "In Progress";
     fields.dateEntered = chicagoDate();
     const created = await transaction.salesOrder.create({ data: {
       creatorId: actorId, requestKey, name, fields,
+      customAmounts: { create: source.customAmounts.filter(value => !layout.fields.some(field => field.key === value.fieldKey && field.deleted)).map(value => ({ fieldKey: value.fieldKey, amount: value.amount })) },
       items: { create: source.items.map(item => ({ position: item.position, description: item.description, quantity: item.quantity, unitPrice: item.unitPrice })) },
       events: { create: { actorId, changes: { event } } },
     }, include });
@@ -81,6 +87,7 @@ function validateItems(items: ItemValue[]) {
 
 function validateFields(fields: Record<string, string>) {
   for (const [key, value] of Object.entries(fields)) {
+    if (customKey(key)) { if (typeof value !== "string" || value.length > 10_000) throw new InputError("Invalid custom field value."); continue; }
     if (protectedStatusFields.includes(key)) throw new InputError("Completion and void details are recorded automatically and cannot be edited.");
     if (!fieldKeys.has(key) || typeof value !== "string" || value.length > 10_000) throw new InputError("Invalid field value.");
     const field = orderFields.find(field => field.key === key);
@@ -109,17 +116,21 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
     throw error;
   }
   return database.$transaction(async transaction => {
+    await lockFields(transaction);
     if (Object.keys(request.patch).some(managedChoice)) await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('order-dropdown-choices'))`;
     await transaction.$queryRaw`SELECT id FROM "SalesOrder" WHERE id = ${request.id}::uuid FOR UPDATE`;
     const order = await transaction.salesOrder.findUniqueOrThrow({ where: { id: request.id }, include });
     if (order.deletedAt) return { ok: false as const, message: "This order is in Trash and cannot be edited." };
     const current = orderView(order);
+    const layout = await readFieldLayout(transaction);
     for (const [key, value] of Object.entries(request.patch)) {
       if (!managedChoice(key) || !value || value === (current.fields[key] ?? "")) continue;
       const available = await transaction.orderChoice.findFirst({ where: { fieldKey: key, label: value, active: true } });
       if (!available) return { ok: false as const, message: `${orderFields.find(field => field.key === key)?.label}: that choice is no longer available. Reload saved values to get the current choices, then select an active choice.` };
     }
     const patch = { ...request.patch };
+    try { await validateCustomPatch(transaction, layout, patch, current.fields, request.fieldVersions); }
+    catch (error) { if (error instanceof FieldSettingsError) return { ok: false as const, message: error.message }; throw error; }
     if (request.closeoutMode === "quick") {
       if (current.fields.status === patch.status) {
         // A repeated quick-close request must retain the original recorded closeout.
@@ -158,11 +169,23 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
     }
     const changes: Record<string, Prisma.InputJsonValue> = {};
     for (const key of Object.keys(next)) if (next[key] !== (current.fields[key] ?? "")) changes[key] = { before: current.fields[key] ?? "", after: next[key] };
+    let newlyUsed = false;
+    for (const field of layout.fields.filter(field => field.custom)) {
+      if (changes[field.key]) changes[field.key] = { before: current.fields[field.key] ?? "", after: next[field.key], label: field.label, type: field.type };
+      if (!field.used && next[field.key]) { field.used = true; newlyUsed = true; }
+    }
     if (request.items && JSON.stringify(current.items) !== JSON.stringify(request.items)) changes.items = { before: current.items, after: request.items };
     if (assignmentChanged) changes.assignments = { before: current.assigneeIds, after: assigneeIds };
     if (!Object.keys(changes).length) return { ok: true as const, order: current };
     const { name, ...values } = next;
     await transaction.salesOrder.update({ where: { id: order.id }, data: { name, fields: values } });
+    // Decimal columns are authoritative; JSON retains the exact display value for
+    // existing field snapshots/deletion queries, updated in this same transaction.
+    for (const field of layout.fields.filter(field => field.custom && field.type === "currency" && field.key in patch)) {
+      if (patch[field.key]) await transaction.orderFieldAmount.upsert({ where: { orderId_fieldKey: { orderId: order.id, fieldKey: field.key } }, create: { orderId: order.id, fieldKey: field.key, amount: patch[field.key] }, update: { amount: patch[field.key] } });
+      else await transaction.orderFieldAmount.deleteMany({ where: { orderId: order.id, fieldKey: field.key } });
+    }
+    if (newlyUsed) await writeLayout(transaction, layout);
     if (request.items && changes.items) {
       await transaction.orderItem.deleteMany({ where: { orderId: order.id } });
       await transaction.orderItem.createMany({ data: request.items.map((item, position) => ({ orderId: order.id, position, description: item.description, quantity: item.quantity || null, unitPrice: item.unitPrice || null })) });
@@ -172,7 +195,7 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
       if (addedIds.length) await transaction.orderAssignment.createMany({ data: addedIds.map(userId => ({ orderId: order.id, userId })) });
     }
     await transaction.orderEvent.create({ data: { orderId: order.id, actorId, changes } });
-    await notifyOrderChange(transaction, order.id, actorId, addedIds, Object.keys(changes).some(key => key !== "assignments"));
+    await notifyOrderChange(transaction, order.id, actorId, addedIds, Object.keys(changes).some(key => key !== "assignments" && !layout.fields.some(field => field.key === key && field.custom && field.type === "employees")));
     return { ok: true as const, order: orderView(await transaction.salesOrder.findUniqueOrThrow({ where: { id: order.id }, include })) };
   }, { timeout: 30_000 });
 }

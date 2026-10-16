@@ -58,6 +58,20 @@ model OrderChoice {
   @@index([fieldKey, position])
 }
 
+model OrderFieldLayout {
+  id String @id
+  version Int @default(1)
+  definitions Json
+}
+
+model OrderFieldAudit {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String @db.Uuid
+  createdAt DateTime @default(now())
+  changes Json
+  @@index([createdAt])
+}
+
 model OrderChoiceAudit {
   id String @id @default(uuid()) @db.Uuid
   actorId String @db.Uuid
@@ -112,7 +126,16 @@ model SalesOrder {
   attachments OrderAttachment[]
   comments OrderComment[]
   @@unique([creatorId, requestKey])
+  customAmounts OrderFieldAmount[]
   @@index([deletedAt, purgeAfter, purgedAt])
+}
+
+model OrderFieldAmount {
+  orderId String @db.Uuid
+  fieldKey String
+  amount Decimal @db.Decimal(20, 2)
+  order SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@id([orderId, fieldKey])
 }
 
 model OrderItem {

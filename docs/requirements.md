@@ -1,5 +1,7 @@
 # Carts and Parts Operations requirements
 
+October 15 custom-field decisions: Kent approved `custom-fields-milestone.md`, including optional Currency support without converting existing fields. Its placement, type-change, copy, printing, inactive-value and labeled-history rules supersede earlier unresolved custom-field details below. Implemented locally; authenticated review pending.
+
 October 14 user deletion: Super Admin alone can permanently delete another employee's Clerk login. Other admins retain deactivate/reactivate access. Preserve the inactive AppUser historical identity and all company order/file/history associations. Deletion pending/complete cannot be reactivated through access controls or invitations; failed external deletion remains blocked and retryable by Super Admin. Super Admin cannot be deleted. Delegating deletion to other admins is deferred.
 
 October 14 invitation safety: show an already-signed-in message on the invitation signup page, with explicit sign-out to continue using another account. Preserve the invitation link through sign-out; do not accept it as the current user or automatically sign them out.

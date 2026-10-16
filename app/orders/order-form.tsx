@@ -2,7 +2,8 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { orderFields } from "../../lib/order-fields";
+import { defaultLayout, displayCustom, formSections, type FieldLayout } from "../../lib/custom-field-model";
+import { CustomFieldInput } from "./custom-field-input";
 import { AssignableUser, ItemValue, OrderView } from "../../lib/order-types";
 import { duplicateOrder, persistOrder } from "./actions";
 import { missingCloseout, orderStatuses, terminalStatus } from "../../lib/order-status";
@@ -14,7 +15,8 @@ import { DeleteOrderButton } from "./delete-order-button";
 import { ConfirmationDialog } from "../ui/confirmation-dialog";
 import { type ChoiceOptions, managedChoice, retainedChoice } from "../../lib/order-choice-policy";
 
-const sections = ["Order Overview", "Billing and Store Information", "Items and Pricing", "Additional Information", "Completion", "Service and Labor"];
+const sections = formSections;
+const fallbackLayout = defaultLayout();
 const invoiceStorePairs = [
   ["text_13__1", "text_21__1"], // Invoice To → Store Name
   ["text_16__1", "text_24__1"], // Address
@@ -30,7 +32,7 @@ function revealCloseout(fields: Record<string, string>) {
   const input = fields.text_79__1?.trim() ? section?.querySelector<HTMLButtonElement>(".date-field") : document.getElementById("closed-out-by");
   input?.focus({ preventScroll: true });
 }
-export function OrderForm({ initial, users, choices = {}, canSendEmail = false, pendingEmailId }: { initial: OrderView; users: AssignableUser[]; choices?: ChoiceOptions; canSendEmail?: boolean; pendingEmailId?: string }) {
+export function OrderForm({ initial, users, layout = fallbackLayout, choices = {}, canSendEmail = false, pendingEmailId }: { initial: OrderView; users: AssignableUser[]; layout?: FieldLayout; choices?: ChoiceOptions; canSendEmail?: boolean; pendingEmailId?: string }) {
   const router = useRouter();
   const [fields, setFields] = useState(initial.fields);
   const [sameAsInvoice, setSameAsInvoice] = useState(false);
@@ -71,10 +73,10 @@ export function OrderForm({ initial, users, choices = {}, canSendEmail = false, 
     if (!Object.keys(patch).length && !itemsChanged && !assignmentsChanged) { setFeedback("Saved"); return true; }
     saving.current = true; setBusy(true); setFeedback("Saving…");
     try {
-      const result = await persistOrder({ id: initial.id, base: saved.current.fields, patch, ...(quick ? { closeoutMode: "quick" as const } : {}), ...(itemsChanged ? { items: snapshot.items, baseItems: saved.current.items } : {}), ...(assignmentsChanged ? { assigneeIds: snapshot.assigneeIds, baseAssigneeIds: saved.current.assigneeIds } : {}) });
+      const result = await persistOrder({ id: initial.id, base: saved.current.fields, patch, fieldVersions: Object.fromEntries(layout.fields.filter(field => field.custom).map(field => [field.key, field.revision])), ...(quick ? { closeoutMode: "quick" as const } : {}), ...(itemsChanged ? { items: snapshot.items, baseItems: saved.current.items } : {}), ...(assignmentsChanged ? { assigneeIds: snapshot.assigneeIds, baseAssigneeIds: saved.current.assigneeIds } : {}) });
       if (!result.ok) {
         if (result.closeoutRequired) { setCloseoutError(true); setFeedback("Unsaved changes"); revealCloseout(snapshot.fields); return false; }
-        blocked.current = true; setConflict(true); setFeedback(result.message + (result.conflict ? ` (${result.conflict.map(key => orderFields.find(field => field.key === key)?.label ?? key).join(", ")})` : ""));
+        blocked.current = true; setConflict(true); setFeedback(result.message + (result.conflict ? ` (${result.conflict.map(key => layout.fields.find(field => field.key === key)?.label ?? key).join(", ")})` : ""));
         return false;
       } else {
         if (quick && quickClose.current === snapshot.fields.status) quickClose.current = null;
@@ -89,7 +91,7 @@ export function OrderForm({ initial, users, choices = {}, canSendEmail = false, 
       }
     } catch { blocked.current = true; setConflict(true); setFeedback("Couldn’t save. Your input is still here. Retry when the connection returns."); return false; }
     finally { saving.current = false; setBusy(false); }
-  }, [initial.id]);
+  }, [initial.id, layout]);
 
   async function sendEmail() {
     if (copying.current || sendingEmail.current || saving.current || blocked.current) return;
@@ -187,18 +189,15 @@ export function OrderForm({ initial, users, choices = {}, canSendEmail = false, 
     <form onClick={() => { if (toast?.success) dismissEmailToast(); }} onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset className="email-form-lock" disabled={emailBusy || copyBusy}>
       {sections.map(section => <details key={section} id={section === "Completion" ? "completion-section" : undefined} className="form-section" open={section !== "Service and Labor"}><summary>{section}</summary><div className="field-grid">
-        {section === "Order Overview" && <>
-          <label>Name <span aria-label="required">*</span><input name="name" value={fields.name ?? ""} onChange={event => update("name", event.target.value)} required /></label>
-          <label>SO Number<input value={initial.number} readOnly /></label>
-          <label>Date Entered<DateField label="Date Entered" value={fields.dateEntered ?? ""} onChange={value => update("dateEntered", value)} /></label>
-          <label>Submitted By<input value={initial.creator} readOnly /></label>
-          <div><span>Status</span><details className="status-picker"><summary className={`status-box status-${fields.status?.replaceAll(" ", "-")}`}>{fields.status}</summary>{orderStatuses.map(status => <button type="button" disabled={busy || conflict} key={status} onClick={event => { changeStatus(status, true); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{status}</button>)}</details><small className="status-help">Complete or Voided here records your name and today’s closeout date.</small></div>
-        </>}
-        {section === "Completion" && <>
-          <label htmlFor="closed-out-by">Closed Out By<input id="closed-out-by" type="text" value={fields.text_79__1 ?? ""} aria-invalid={closeoutError && !fields.text_79__1?.trim() || undefined} aria-describedby={closeoutError ? "closeout-warning" : "closeout-help"} onChange={event => update("text_79__1", event.target.value)} /></label>
-          <label>Closed Out Date<DateField label="Closed Out Date" value={fields.closed_out_date4__1 ?? ""} invalid={closeoutError && !fields.closed_out_date4__1} describedBy={closeoutError ? "closeout-warning" : "closeout-help"} onChange={value => update("closed_out_date4__1", value)} /></label>
-        </>}
-        {orderFields.filter(field => field.section === section && !["text_79__1", "closed_out_date4__1"].includes(field.key)).map(field => <Fragment key={field.key}>
+{layout.fields.filter(field => field.active && !field.deleted && field.section === section).map(field => <Fragment key={field.key}>
+{field.key === "name" && <label>{field.label} <span aria-label="required">*</span><input name="name" value={fields.name ?? ""} onChange={event => update("name", event.target.value)} required /></label>}
+{field.key === "soNumber" && <label>{field.label}<input value={initial.number} readOnly /></label>}
+{field.key === "dateEntered" && <label>{field.label}<DateField label={field.label} value={fields.dateEntered ?? ""} onChange={value => update("dateEntered", value)} /></label>}
+{field.key === "submittedBy" && <label>{field.label}<input value={initial.creator} readOnly /></label>}
+{field.key === "status" && <div><span>{field.label}</span><details className="status-picker"><summary className={`status-box status-${fields.status?.replaceAll(" ", "-")}`}>{fields.status}</summary>{orderStatuses.map(status => <button type="button" disabled={busy || conflict} key={status} onClick={event => { changeStatus(status, true); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{status}</button>)}</details><small className="status-help">Complete or Voided here records your name and today’s closeout date.</small></div>}
+{field.key === "text_79__1" && <label htmlFor="closed-out-by">{field.label}<input id="closed-out-by" type="text" value={fields.text_79__1 ?? ""} aria-invalid={closeoutError && !fields.text_79__1?.trim() || undefined} aria-describedby={closeoutError ? "closeout-warning" : "closeout-help"} onChange={event => update("text_79__1", event.target.value)} /></label>}
+{field.key === "closed_out_date4__1" && <label>{field.label}<DateField label={field.label} value={fields.closed_out_date4__1 ?? ""} invalid={closeoutError && !fields.closed_out_date4__1} describedBy={closeoutError ? "closeout-warning" : "closeout-help"} onChange={value => update("closed_out_date4__1", value)} /></label>}
+{field.custom && <CustomFieldInput field={field} value={fields[field.key] ?? ""} users={users} onChange={value => update(field.key, value)} />}
         {field.key === "text_21__1" && <div className="invoice-copy-control">
           <label><input type="checkbox" checked={sameAsInvoice} aria-describedby="invoice-copy-help" onChange={event => {
             const checked = event.target.checked;
@@ -210,12 +209,12 @@ export function OrderForm({ initial, users, choices = {}, canSendEmail = false, 
           }} />Store Same as Invoice</label>
           <small id="invoice-copy-help">Copies Invoice name, address, city, state, ZIP and phone into Store fields, replacing their current values. You can edit them afterward. Unchecking keeps the copied values.</small>
         </div>}
-        <label>{field.label}
-          {field.options ? <select value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)}><option value="">—</option>{retainedChoice(managedChoice(field.key) ? choices[field.key] ?? [] : field.options, fields[field.key] ?? "") && <option value={fields[field.key]} disabled>{fields[field.key]} (saved value; unavailable for new selections)</option>}{(managedChoice(field.key) ? choices[field.key] ?? [] : field.options).map(option => <option key={option}>{option}</option>)}</select>
+        {!field.custom && !["name","soNumber","dateEntered","submittedBy","status","text_79__1","closed_out_date4__1"].includes(field.key) && <label>{field.label}
+          {field.type === "select" ? <select value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)}><option value="">—</option>{retainedChoice(managedChoice(field.key) ? choices[field.key] ?? [] : field.options, fields[field.key] ?? "") && <option value={fields[field.key]} disabled>{fields[field.key]} (saved value; unavailable for new selections)</option>}{(managedChoice(field.key) ? choices[field.key] ?? [] : field.options).map(option => <option key={option}>{option}</option>)}</select>
             : field.type === "date" ? <DateField label={field.label} value={fields[field.key] ?? ""} onChange={value => update(field.key, value)} />
             : field.type === "textarea" ? <textarea value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />
               : <input type={field.type} step={field.type === "number" ? "any" : undefined} value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />}
-        </label></Fragment>)}
+        {field.help && <small>{field.help}</small>}</label>}{!field.custom && ["name", "soNumber", "dateEntered", "submittedBy", "status", "text_79__1", "closed_out_date4__1"].includes(field.key) && field.help && <small>{field.help}</small>}</Fragment>)}
       </div>
       {section === "Completion" && <>
         <p id="closeout-help">For the buttons below, enter the person responsible for closeout and choose the closeout date. The Status menu closes the order using your name and today’s date. Notes and any void reason remain available here.</p>
@@ -229,6 +228,8 @@ export function OrderForm({ initial, users, choices = {}, canSendEmail = false, 
       </details>)}
       </fieldset>
     </form>
+    {layout.fields.some(field => field.custom && !field.active && !field.deleted && fields[field.key]) && <details className="form-section inactive-custom-fields"><summary>Inactive Fields</summary><dl>{layout.fields.filter(field => field.custom && !field.active && !field.deleted && fields[field.key]).map(field => <div key={field.key}><dt>{field.label}</dt><dd>{displayCustom(field, fields[field.key], new Map(users.map(user => [user.id, user.displayName || user.email])))}</dd></div>)}</dl></details>}
+    <p><Link href={`/orders/${initial.id}/print`} prefetch={false}>Print Saved Order</Link></p>
     {canSendEmail && <DeleteOrderButton orderId={initial.id} disabled={dirty || busy || conflict || emailBusy || copyBusy} />}
   </main>;
 }

@@ -13,7 +13,7 @@ export function groupActivity<T extends Event>(events: T[]) {
       const merged = { ...changesOf(group) };
       for (const [key, value] of Object.entries(changesOf(event))) {
         const newer = merged[key];
-        merged[key] = isChange(newer) && isChange(value) ? { before: value.before, after: newer.after } : value;
+        merged[key] = isChange(newer) && isChange(value) ? { ...newer, before: value.before, after: newer.after } : value;
       }
       group.changes = merged;
       group.lastEventId = event.id;

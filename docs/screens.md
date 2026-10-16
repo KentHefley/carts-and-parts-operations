@@ -1,5 +1,7 @@
 # Screen and styling plan
 
+October 15 custom-field screen implemented locally: Administration → Add Sales Order Field provides section selection, Move Up/Move Down and preview before saving, with separate activation and confirmed deletion controls. Order Details shows active fields in the saved layout and collapsed inactive values. Print Saved Order opens a saved snapshot for browser printing/PDF. See `custom-fields-milestone.md`.
+
 Agreed direction, October 5, 2026. This is a browser-based responsive web app. Screens described here are planned, not implemented. Review wireframes and styled mockups before application development.
 
 ## App shell and navigation

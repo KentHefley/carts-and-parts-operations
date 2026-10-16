@@ -1,5 +1,13 @@
 # Development verification
 
+October 15 field-editor regression: actual FieldSettings component tested with fake persisted actions and compiled CSS. Selecting the bottom field scrolled/focused its editor at 110px below a sticky header. Deactivate enabled adjacent Review & Save, focused the preview without writing, then Save Layout wrote inactive state and focused success feedback. Reload retained inactive state. No browser errors or 390px horizontal overflow. The fixture did not alter Kent's real field. Focused lint and final production build passed; Next diagnostics checked separately.
+
+## October 15 custom fields
+
+Run `npx tsx scripts/test-custom-fields.ts` against the guarded development target. It creates and cleans synthetic definitions, users, orders and notifications; it does not send emails. Covers types, decimal storage, permissions, copy resets, concurrent settings/value edits, persisted ordering, inactive/stale fields, deletion including Trash, and labeled audit retention. Related `npm run test:trash` and `npm run test:email` passed. Actual-component browser fixtures with fake actions verified add/type/section/preview/save, delete confirmation/Escape, custom-value Save Now, unique employee choices, checkbox interaction, and 390px layout without overflow. Print component visually verified with currency/names/false-checkbox and omitted inactive/empty values. Final production build and empty Next runtime/compilation diagnostics passed. Automated browser is signed out of the real app; authenticated review remains with Kent.
+
+Employee review: add a test optional field, choose its section and position, preview/save, reload an order, enter/save/reopen its value, copy it, deactivate it and inspect Inactive Fields. Review the printed saved snapshot. Confirm ordinary users cannot open settings. Use a disposable custom field to test permanent deletion and retained labeled order history.
+
 Latest October 12 list-policy check: regular users see no completed-list selection controls; admins can select and Trash but cannot bulk copy. Active-list copy/Trash controls and Dismiss label were verified in the isolated actual-component browser fixture. `test:selection` now verifies completed/voided copy rejection for users/admins and completed deletion rejection for creators unless admin. Prior completed-list copying checklists are superseded; opened-order controls are unchanged.
 
 ## October 12 order-list selection

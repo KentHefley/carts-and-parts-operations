@@ -174,6 +174,31 @@ label { font-size:13px; font-weight:500; }
 .eyebrow,.development-label { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.7px; }
 .screen-caption { color:var(--muted); margin:0; }
 .content-panel { padding:22px; border:1px solid var(--line); border-radius:9px; background:var(--paper); }
+.field-settings-controls { border:0; padding:0; min-width:0; }
+.field-settings-controls > .content-panel { margin-top:18px; }
+.field-settings-heading { scroll-margin-top:110px; }
+.field-layout-list { padding-left:24px; }
+.field-layout-list li { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); }
+.field-layout-list li > span { overflow-wrap:anywhere; min-width:0; }
+.field-layout-list li > div { display:flex; gap:6px; flex-shrink:0; }
+.field-grid small { display:block; font-weight:normal; }
+.custom-employees { min-width:0; }
+.custom-employees li { margin:6px 0; overflow-wrap:anywhere; }
+.print-order { max-width:8in; margin:24px auto; padding:20px; color:#111; background:#fff; font-family:Arial,sans-serif; }
+.print-order nav { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.print-order h1 { font-size:19px; }
+.print-order h2 { font-size:14px; margin:12px 0 4px; }
+.print-order dl { margin:0; }
+.print-order dl > div { display:flex; gap:5px; font-size:12px; line-height:16px; }
+.print-order dt { font-weight:bold; }
+.print-order dd { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; flex:1; }
+@media (max-width:500px) { .field-layout-list li { align-items:flex-start; flex-direction:column; } }
+@media print {
+  @page { size:letter; margin:0.5in; }
+  .print-order { margin:0; padding:0; max-width:none; }
+  .print-order nav, [data-clerk-component], nextjs-portal { display:none !important; }
+  .print-order dl > div { break-inside:avoid; }
+}
 .panel-heading { display:flex; justify-content:space-between; gap:16px; align-items:center; margin-bottom:18px; }
 .panel-heading h2 { font-size:18px; font-weight:600; }
 .dashboard-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:28px; }

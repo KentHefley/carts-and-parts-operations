@@ -1,7 +1,7 @@
 import type { OrderView } from "./order-types";
 
 // Explicit selection: new form fields must never silently expand this email.
-const selection = [
+export const orderEmailSelection = [
   ["Date Entered", "dateEntered"], ["Division", "division__1"], ["Purchase Order", "text_28__1"], ["Scheduled Job Date", "start_job_date__1"],
   ["Salesman", "dup__of_text3__1"], ["Job Type", "dropdown__1"], ["Priority", "priority__1"], ["Terms", "terms__1"], ["NTE", "text_12__1"], ["Price Level", "dup__of_priority__1"], ["Freight", "text772__1"], ["Miles", "numbers__1"],
   ["Invoice To", "text_13__1"], ["Invoice Address", "text_16__1"], ["Invoice City", "text_17__1"], ["Invoice State", "text_18__1"], ["Invoice ZIP", "text_19__1"], ["Invoice Contact", "text_15__1"], ["Invoice Phone", "text71__1"],
@@ -11,7 +11,7 @@ const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ "&":
 const sectionStarts = new Set(["Invoice To", "Store Name", "Description of Service"]);
 
 export function orderEmailTemplate(order: OrderView) {
-  const rows: [string, string][] = selection.map(([label, key]) => [label, order.fields[key] ?? ""]);
+  const rows: [string, string][] = orderEmailSelection.map(([label, key]) => [label, order.fields[key] ?? ""]);
   order.items.forEach((item, index) => {
     if ([item.quantity, item.description, item.unitPrice].some(value => value.trim())) {
       rows.push([`Item ${index + 1} Quantity`, item.quantity], [`Item ${index + 1} Description`, item.description]);

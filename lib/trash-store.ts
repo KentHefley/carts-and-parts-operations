@@ -88,6 +88,7 @@ export async function purgeExpiredOrders(db: PrismaClient, storage: AttachmentSt
         await tx.notification.deleteMany({ where: { orderId: entry.id } });
         await tx.orderAssignment.deleteMany({ where: { orderId: entry.id } });
         await tx.orderItem.deleteMany({ where: { orderId: entry.id } });
+        await tx.orderFieldAmount.deleteMany({ where: { orderId: entry.id } });
         await tx.orderEvent.deleteMany({ where: { orderId: entry.id } });
         await tx.salesOrder.update({ where: { id: entry.id }, data: { name: null, fields: {}, purgedAt: new Date() } });
       }, { timeout: 20_000 });
