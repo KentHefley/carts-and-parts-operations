@@ -32,7 +32,8 @@ async function client(url: URL) {
 }
 
 async function command(name: "pg_dump" | "pg_restore", url: URL, args: string[]) {
-  const executable = path.resolve(".recovery-tools", "bin", name + ".exe");
+  const executable = path.resolve(process.env.PG_BIN_DIR ?? ".recovery-tools/bin", name + (process.platform === "win32" ? ".exe" : ""));
+  await mkdir(".recovery-tools", { recursive: true });
   const certificates = path.resolve(".recovery-tools", "roots.pem");
   await writeFile(certificates, rootCertificates.join("\n"));
   await new Promise<void>((resolve, reject) => {
@@ -67,6 +68,15 @@ async function fingerprint(db: Client) {
 }
 
 async function key(create: boolean) {
+  const supplied = process.env.BACKUP_ENCRYPTION_KEY_BASE64;
+  if (supplied) {
+    assert.match(supplied, /^[A-Za-z0-9+/]{43}=$/, "Invalid configured recovery key.");
+    const decoded = Buffer.from(supplied, "base64");
+    assert.equal(decoded.length, 32, "Configured recovery key must be 32 bytes.");
+    assert.equal(decoded.toString("base64"), supplied, "Invalid configured recovery key encoding.");
+    return decoded;
+  }
+  assert.ok(process.env.CI !== "true", "Scheduled backups require the existing recovery key secret; never generate a replacement.");
   const target = path.join(root, "backup.key");
   if (create) {
     try { await writeFile(target, randomBytes(32), { flag: "wx", mode: 0o600 }); }
@@ -151,6 +161,12 @@ async function drill(url: URL, filename: string) {
     await command("pg_restore", target, ["--exit-on-error", "--no-owner", "--no-acl", "--dbname=" + name, dumpPath]);
     restored = await client(target);
     assert.deepEqual(await fingerprint(restored), archive.tables, "Restored table contents differ.");
+    const associations = await restored.query<{ key: string; size: number }>(`SELECT a."storageKey" AS key, a.size FROM "OrderAttachment" a JOIN "SalesOrder" o ON o.id=a."orderId" JOIN "AppUser" u ON u.id=a."uploaderId" WHERE a.state='READY'`);
+    for (const association of associations.rows) {
+      const file = archive.files.find((entry) => entry.key === association.key);
+      assert.ok(file, "Restored order attachment has no backed-up bytes.");
+      assert.equal(file.size, association.size);
+    }
     for (const [index, file] of archive.files.entries()) {
       const body = Buffer.from(file.data, "base64");
       assert.equal(body.length, file.size);
@@ -162,7 +178,7 @@ async function drill(url: URL, filename: string) {
       assert.ok(object.Body);
       assert.equal(hash(Buffer.from(await object.Body.transformToByteArray())), file.sha256, "Restored file checksum differs.");
     }
-    console.log(JSON.stringify({ restoreVerified: true, tables: Object.keys(archive.tables).length, files: archive.files.length, isolatedDatabase: name }));
+    console.log(JSON.stringify({ restoreVerified: true, tables: Object.keys(archive.tables).length, files: archive.files.length, orderAttachmentAssociations: associations.rows.length, isolatedDatabase: name }));
   } finally {
     await restored?.end();
     for (const ownedKey of ownedKeys) {
