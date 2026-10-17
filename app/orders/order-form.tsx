@@ -1,4 +1,6 @@
 "use client";
+import { environmentLabel } from "../../lib/environment-label";
+
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -172,7 +174,7 @@ export function OrderForm({ initial, users, layout = fallbackLayout, choices = {
   }
 
   return <main className="order-page">
-    <header className="order-header"><div><p className="development-label">Development</p><h1>{initial.number} · {fields.name || "New Sales Order"}</h1></div>
+    <header className="order-header"><div><p className="development-label">{environmentLabel}</p><h1>{initial.number} · {fields.name || "New Sales Order"}</h1></div>
       <Link prefetch={false} href={terminalStatus(baseline.fields.status) ? "/completed-orders" : "/sales-orders"} onClick={event => {
         if (dirty || saving.current) { event.preventDefault(); setFeedback("Save pending changes before returning to the order list."); }
         else if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {

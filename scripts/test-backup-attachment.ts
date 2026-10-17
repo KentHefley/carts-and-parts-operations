@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { PDFDocument } from "pdf-lib";
-import { developmentCredentials } from "./development-target";
+import { backupCredentials } from "./backup-target";
 import { createDatabaseClient } from "../lib/database-client";
 import { attachmentStorage } from "../lib/attachment-storage";
 
@@ -18,10 +18,11 @@ async function run(args: string[]) {
 }
 
 async function main() {
-  const db = createDatabaseClient(developmentCredentials().databaseUrl);
+  const { mode, databaseUrl } = backupCredentials();
+  const db = createDatabaseClient(databaseUrl);
   const storage = attachmentStorage();
   const id = randomUUID();
-  const key = `development/recovery-test-fixtures/${id}/receipt.pdf`;
+  const key = `${mode}/recovery-test-fixtures/${id}/receipt.pdf`;
   let userId: string | undefined;
   let orderId: string | undefined;
   let attemptedUpload = false;
@@ -37,9 +38,9 @@ async function main() {
     const signed = await storage.upload(key, "application/pdf", bytes.length);
     const response = await fetch(signed, { method: "PUT", headers: { "content-type": "application/pdf" }, body: bytes, signal: AbortSignal.timeout(60_000) });
     assert.ok(response.ok, "Fixture upload failed.");
-    await db.orderAttachment.create({ data: { orderId: order.id, uploaderId: user.id, requestKey: id, filename: "synthetic-receipt.pdf", contentType: "application/pdf", size: bytes.length, stagingKey: `development/recovery-test-fixtures/${id}/unused-staging`, storageKey: key, state: "READY", expiresAt: new Date(Date.now() + 3600_000), uploadedAt: new Date(), stagingCleanedAt: new Date() } });
+    await db.orderAttachment.create({ data: { orderId: order.id, uploaderId: user.id, requestKey: id, filename: "synthetic-receipt.pdf", contentType: "application/pdf", size: bytes.length, stagingKey: `${mode}/recovery-test-fixtures/${id}/unused-staging`, storageKey: key, state: "READY", expiresAt: new Date(Date.now() + 3600_000), uploadedAt: new Date(), stagingCleanedAt: new Date() } });
     const backup = await run(["backup"]);
-    const filename = backup.match(/development-[a-f0-9]{24}\.cnpbackup/)?.[0];
+    const filename = backup.match(new RegExp(`${mode}-[a-f0-9]{24}\\.cnpbackup`))?.[0];
     assert.ok(filename, "Backup filename missing.");
     const restored = await run(["drill", filename]);
     const verification = JSON.parse(restored.split("\n").find((line) => line.startsWith('{"restoreVerified"')) ?? "{}");

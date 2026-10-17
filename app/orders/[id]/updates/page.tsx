@@ -1,3 +1,4 @@
+import { environmentLabel } from "../../../../lib/environment-label";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireApprovedUser } from "../../../../lib/access";
@@ -22,7 +23,7 @@ export default async function Updates({ params, searchParams }: { params: Promis
     catch (caught) { if (caught instanceof CommentError) error = caught.message; else throw caught; }
   }
   return <AuthenticatedShell title="Sales Order" active={completed ? "Completed Sales Orders" : "Sales Orders"} admin={actor.role === "ADMIN"}><main className="order-page">
-    <header className="order-header"><div><p className="development-label">Development</p><h1>DEV-{String(order.number).padStart(6, "0")} · {order.name || "New Sales Order"}</h1></div><Link href={completed ? "/completed-orders" : "/sales-orders"}>{completed ? "Completed Sales Orders" : "Sales Orders"}</Link></header>
+    <header className="order-header"><div><p className="development-label">{environmentLabel}</p><h1>DEV-{String(order.number).padStart(6, "0")} · {order.name || "New Sales Order"}</h1></div><Link href={completed ? "/completed-orders" : "/sales-orders"}>{completed ? "Completed Sales Orders" : "Sales Orders"}</Link></header>
     <div className="save-toolbar"><OrderTabs orderId={id} current="updates" /></div>
     {!order.name && <p>Save the order with a Name before posting comments.</p>}
     {error && <p role="alert">{error} <Link href={`/orders/${id}/updates`}>Newest comments</Link></p>}

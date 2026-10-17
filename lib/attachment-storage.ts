@@ -1,12 +1,12 @@
 import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { runtimeEnvironment } from "./environment-policy";
 
-// Deliberately fails closed outside the configured development environment.
+// Deliberately fails closed outside the explicitly enrolled non-live environments.
 export function attachmentStorage() {
   const account = process.env.R2_ACCOUNT_ID;
-  const bucket = process.env.R2_BUCKET_NAME;
-  const database = new URL(process.env.DATABASE_URL ?? "https://invalid");
-  if (!account || !/^[0-9a-f]{32}$/i.test(account) || bucket !== "carts-parts-operations-development" || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY || !process.env.CLERK_SECRET_KEY?.startsWith("sk_test_") || database.hostname !== "ep-bold-sky-b5e3vwct-pooler.c-7.us-east-2.aws.neon.tech" || database.pathname !== "/neondb") throw new Error("Development file storage is not configured.");
+  const { bucket } = runtimeEnvironment();
+  if (!account || !/^[0-9a-f]{32}$/i.test(account) || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) throw new Error("Private file storage is not configured.");
   const client = new S3Client({ region: "auto", endpoint: `https://${account}.r2.cloudflarestorage.com`, credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY }, requestChecksumCalculation: "WHEN_REQUIRED", responseChecksumValidation: "WHEN_REQUIRED", maxAttempts: 2 });
   return {
     upload: (key: string, type: string, size: number, expiresIn = 600) => getSignedUrl(client, new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: type, ContentLength: size }), { expiresIn, signableHeaders: new Set(["content-type", "content-length"]) }),

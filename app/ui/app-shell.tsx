@@ -1,4 +1,6 @@
 "use client";
+import { environmentLabel, isPilot } from "../../lib/environment-label";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -35,8 +37,8 @@ export function AppShell({ title, active, admin, initialTheme, initialCollapsed,
       <Link className="app-brand" href="/" aria-label="Carts and Parts Operations dashboard"><Image className="brand-light" src="/branding/logo.png" alt="Carts and Parts, Inc." width={465} height={85} priority /><Image className="brand-dark" src="/branding/logo-white.png" alt="Carts and Parts, Inc." width={465} height={85} priority /><span>OPERATIONS</span></Link>
       <nav aria-label="Main navigation">{navItems.map(item => item.href ? <Link key={item.label} href={item.href} prefetch={false} aria-current={active === item.label ? "page" : undefined} title={collapsed ? item.label : undefined} onClick={() => setMobileOpen(false)}><NavigationIcon kind={item.icon} /><span>{item.label}</span></Link> : <button key={item.label} type="button" disabled title={`${item.label} — coming later`}><NavigationIcon kind={item.icon} /><span>{item.label}<small>Coming later</small></span></button>)}</nav>
       <button className="sidebar-toggle" onClick={() => { setCollapsed(!collapsed); preference("cp-sidebar-v1", collapsed ? "expanded" : "collapsed"); }} aria-expanded={!collapsed} aria-label={collapsed ? "Expand navigation" : "Collapse navigation"} title={collapsed ? "Expand navigation" : undefined}>{collapsed ? "»" : "« Collapse navigation"}</button>
-      <p className="sidebar-environment">Development</p>
+      <p className="sidebar-environment">{environmentLabel}</p>
     </aside>
-    <div className="app-workspace"><header className="app-topbar"><div className="topbar-title"><button className="mobile-nav-toggle" aria-controls="app-navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? "Close menu" : "Menu"}</button><strong>{title}</strong></div><div className="header-actions"><Link className="activity-nav-link" href="/activity" prefetch={false}>View All Activity</Link><button className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}>{theme === "light" ? "Dark mode" : "Light mode"}</button><NotificationBell /><UserButton /></div></header><div id="workspace-content" tabIndex={-1} className="workspace-content">{children}</div></div>
+    <div className="app-workspace"><header className="app-topbar"><div className="topbar-title"><button className="mobile-nav-toggle" aria-controls="app-navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? "Close menu" : "Menu"}</button><strong>{title}</strong></div><div className="header-actions"><Link className="activity-nav-link" href="/activity" prefetch={false}>View All Activity</Link><button className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}>{theme === "light" ? "Dark mode" : "Light mode"}</button><NotificationBell /><UserButton /></div></header><div id="workspace-content" tabIndex={-1} className="workspace-content">{isPilot && <p className="pilot-notice"><strong>Pilot · Testing only.</strong> Monday.com remains the official record.</p>}{children}</div></div>
   </div>;
 }

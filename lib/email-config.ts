@@ -1,3 +1,4 @@
+import { applicationMode, pilotAllowlist, runtimeEnvironment } from "./environment-policy";
 export type EmailPayload = { from: string; to: string[]; reply_to?: string; subject: string; text: string; html: string };
 export const developmentRecipient = "kent@cartsandparts.com";
 export const developmentSender = "Carts and Parts Operations <sales-orders@orders.cartsandparts.com>";
@@ -5,16 +6,14 @@ export const developmentReplyTo = "kent@cartsandparts.com";
 const developmentRecipients = new Set([developmentRecipient, "jleo3140@gmail.com", "augustforum@gmail.com", "hefleykent@gmail.com"]);
 export class EmailPolicyError extends Error {}
 
-export function verifyEmailRecipients(recipients: string[]) {
-  if (!recipients.length || recipients.some(email => !developmentRecipients.has(email.toLowerCase()))) {
-    throw new EmailPolicyError("Development email can only be sent to approved test recipients. Remove other assignees to test; nobody is redirected.");
+export function verifyEmailRecipients(recipients: string[], env: Record<string, string | undefined> = process.env) {
+  const allowed = applicationMode(env) === "pilot" ? new Set(pilotAllowlist(env.SO_EMAIL_ALLOWED_RECIPIENTS)) : developmentRecipients;
+  if (!recipients.length || recipients.some(email => !allowed.has(email.toLowerCase()))) {
+    throw new EmailPolicyError("Non-live email can only be sent to approved test recipients. Remove other assignees to test; nobody is redirected.");
   }
 }
 export function emailConfiguration() {
-  const target = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL) : null;
-  if (!process.env.CLERK_SECRET_KEY?.startsWith("sk_test_") || !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_") || target?.hostname !== "ep-bold-sky-b5e3vwct-pooler.c-7.us-east-2.aws.neon.tech" || target.pathname !== "/neondb") {
-    throw new EmailPolicyError("Email is enabled only in the verified development environment. Live sender setup is still required.");
-  }
+  runtimeEnvironment();
   if (!process.env.RESEND_API_KEY) throw new EmailPolicyError("Resend API key is missing. Add RESEND_API_KEY to .env.local and restart the server.");
   return { apiKey: process.env.RESEND_API_KEY };
 }

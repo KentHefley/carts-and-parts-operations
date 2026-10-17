@@ -7,7 +7,7 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import { rootCertificates } from "node:tls";
 import { Client } from "pg";
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { developmentCredentials } from "./development-target";
+import { backupCredentials } from "./backup-target";
 import { attachmentStorage } from "../lib/attachment-storage";
 
 const root = path.resolve(".recovery");
@@ -15,7 +15,8 @@ const hash = (bytes: Buffer | string) => createHash("sha256").update(bytes).dige
 const quote = (name: string) => '"' + name.replaceAll('"', '""') + '"';
 const magic = Buffer.from("CNPBACK1");
 type FileEntry = { key: string; size: number; type: string; sha256: string; data: string };
-type Archive = { version: 1; capturedAt: string; dump: string; dumpHash: string; tables: Record<string, { count: number; sha256: string }>; files: FileEntry[] };
+type BackupMode = "development" | "pilot";
+type Archive = { version: 1; environment?: BackupMode; capturedAt: string; dump: string; dumpHash: string; tables: Record<string, { count: number; sha256: string }>; files: FileEntry[] };
 
 function connection(databaseUrl: string, database = "neondb") {
   const url = new URL(databaseUrl);
@@ -87,9 +88,9 @@ async function key(create: boolean) {
   return result;
 }
 
-async function backup(url: URL) {
+async function backup(url: URL, mode: BackupMode) {
   await mkdir(root, { recursive: true });
-  const secret = await key(true);
+  const secret = await key(mode === "development");
   const id = randomBytes(12).toString("hex");
   const dumpPath = path.join(root, `${id}.partial.dump`);
   const db = await client(url);
@@ -103,7 +104,7 @@ async function backup(url: URL) {
     let totalBytes = 0;
     const storage = attachmentStorage();
     for (const file of manifest.rows) {
-      assert.ok(file.key.startsWith("development/"), "Unexpected storage namespace.");
+      assert.ok(file.key.startsWith(`${mode}/`), "Unexpected storage namespace.");
       totalBytes += file.size;
       assert.ok(totalBytes <= 250 * 1024 * 1024, "Pilot backup exceeds the in-memory 250 MB limit.");
       const object = await storage.read(file.key);
@@ -113,12 +114,12 @@ async function backup(url: URL) {
       files.push({ ...file, sha256: hash(bytes), data: bytes.toString("base64") });
     }
     const dump = await readFile(dumpPath);
-    const archive: Archive = { version: 1, capturedAt: new Date().toISOString(), tables, files, dump: dump.toString("base64"), dumpHash: hash(dump) };
+    const archive: Archive = { version: 1, environment: mode, capturedAt: new Date().toISOString(), tables, files, dump: dump.toString("base64"), dumpHash: hash(dump) };
     const iv = randomBytes(12);
     const cipher = createCipheriv("aes-256-gcm", secret, iv);
     cipher.setAAD(magic);
     const ciphertext = Buffer.concat([cipher.update(gzipSync(JSON.stringify(archive))), cipher.final()]);
-    const filename = `development-${id}.cnpbackup`;
+    const filename = `${mode}-${id}.cnpbackup`;
     await writeFile(path.join(root, filename), Buffer.concat([magic, iv, cipher.getAuthTag(), ciphertext]), { flag: "wx", mode: 0o600 });
     await db.query("COMMIT");
     console.log(JSON.stringify({ backup: filename, tables: Object.keys(tables).length, files: files.length, fileBytes: totalBytes, encrypted: true }));
@@ -128,8 +129,8 @@ async function backup(url: URL) {
   }
 }
 
-async function drill(url: URL, filename: string) {
-  assert.match(filename, /^development-[a-f0-9]{24}\.cnpbackup$/);
+async function drill(url: URL, filename: string, mode: BackupMode) {
+  assert.match(filename, new RegExp(`^${mode}-[a-f0-9]{24}\\.cnpbackup$`));
   const bytes = await readFile(path.join(root, filename));
   assert.ok(bytes.subarray(0, 8).equals(magic), "Unrecognized backup format.");
   const decipher = createDecipheriv("aes-256-gcm", await key(false), bytes.subarray(8, 20));
@@ -137,6 +138,8 @@ async function drill(url: URL, filename: string) {
   decipher.setAuthTag(bytes.subarray(20, 36));
   const archive = JSON.parse(gunzipSync(Buffer.concat([decipher.update(bytes.subarray(36)), decipher.final()]), { maxOutputLength: 512 * 1024 * 1024 }).toString()) as Archive;
   assert.equal(archive.version, 1);
+  assert.equal(archive.environment ?? "development", mode, "Archive environment differs from restoration target.");
+  assert.ok(archive.files.every(file => file.key.startsWith(`${mode}/`)), "Archive file namespace differs from target.");
   const dump = Buffer.from(archive.dump, "base64");
   assert.equal(hash(dump), archive.dumpHash);
   attachmentStorage(); // Existing bucket, credentials and development checks must pass.
@@ -145,7 +148,7 @@ async function drill(url: URL, filename: string) {
   const id = randomBytes(12).toString("hex");
   const name = `recovery_drill_${id}`;
   assert.match(name, /^recovery_drill_[a-f0-9]{24}$/);
-  const prefix = `development/recovery-drills/${id}/`;
+  const prefix = `${mode}/recovery-drills/${id}/`;
   const dumpPath = path.join(root, `${id}.restore.dump`);
   const admin = await client(url);
   let created = false;
@@ -199,10 +202,10 @@ async function drill(url: URL, filename: string) {
 }
 
 async function main() {
-  const { databaseUrl } = developmentCredentials();
+  const { mode, databaseUrl } = backupCredentials();
   const url = connection(databaseUrl);
-  if (process.argv[2] === "backup") await backup(url);
-  else if (process.argv[2] === "drill" && process.argv[3]) await drill(url, process.argv[3]);
+  if (process.argv[2] === "backup") await backup(url, mode);
+  else if (process.argv[2] === "drill" && process.argv[3]) await drill(url, process.argv[3], mode);
   else throw new Error("Use backup, or drill with an archive filename.");
 }
 main().catch((error: unknown) => {

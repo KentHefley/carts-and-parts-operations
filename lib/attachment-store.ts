@@ -3,6 +3,7 @@ import { Prisma, PrismaClient } from "../generated/prisma/client";
 import { attachmentInput, canManageAttachments, fileSignature, validAttachmentId } from "./attachment-policy";
 import type { AttachmentStorage } from "./attachment-storage";
 import { notifyOrderChange } from "./notification-store";
+import { applicationMode } from "./environment-policy";
 
 async function access(tx: Prisma.TransactionClient, orderId: string, actorId: string, write = false) {
   if (!validAttachmentId(orderId) || !validAttachmentId(actorId)) throw new Error("Invalid order or account.");
@@ -27,7 +28,8 @@ export async function beginAttachment(db: PrismaClient, storage: AttachmentStora
       return previous;
     }
     const id = randomUUID();
-    return tx.orderAttachment.create({ data: { id, orderId, uploaderId: actorId, requestKey, ...input, stagingKey: `development/staging/${id}`, storageKey: `development/orders/${orderId}/${id}`, expiresAt: new Date(Date.now() + 15 * 60_000) } });
+    const namespace = applicationMode();
+    return tx.orderAttachment.create({ data: { id, orderId, uploaderId: actorId, requestKey, ...input, stagingKey: `${namespace}/staging/${id}`, storageKey: `${namespace}/orders/${orderId}/${id}`, expiresAt: new Date(Date.now() + 15 * 60_000) } });
   });
   const remaining = Math.floor((row.expiresAt.getTime() - Date.now()) / 1000) - 60;
   if (remaining < 1) throw new Error("Upload expired. Start a new attempt.");

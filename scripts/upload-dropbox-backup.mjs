@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { config } from "dotenv";
-import { cleanupExpiredBackups } from "./backup-retention.mjs";
+import { cleanupExpiredBackups, backupPattern } from "./backup-retention.mjs";
 
 config({ path: ".env.local", quiet: true });
 config({ path: ".env.backup.local", quiet: true });
@@ -10,7 +10,8 @@ const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 async function main() {
   const filename = process.argv[2];
-  assert.match(filename ?? "", /^development-[a-f0-9]{24}\.cnpbackup$/, "Supply a development encrypted archive filename.");
+  const mode = process.env.BACKUP_ENV ?? "development";
+  assert.match(filename ?? "", backupPattern(mode), "Supply an encrypted archive filename matching the backup environment.");
   const bytes = await readFile(`.recovery/${filename}`);
   assert.ok(bytes.subarray(0, 8).equals(Buffer.from("CNPBACK1")), "Only encrypted recovery archives may be uploaded.");
   assert.ok(bytes.length < 150 * 1024 * 1024, "Archive needs Dropbox upload-session support.");
@@ -49,7 +50,7 @@ async function main() {
   assert.equal(downloadedMetadata.rev, metadata.rev, "Backup revision changed before verification.");
   const restored = Buffer.from(await download.arrayBuffer());
   assert.equal(sha256(restored), sha256(bytes), "Dropbox backup checksum differs; do not delete local backup.");
-  const expiredBackupsDeleted = process.argv.includes("--cleanup") ? await cleanupExpiredBackups(rpc, metadata) : 0;
+  const expiredBackupsDeleted = process.argv.includes("--cleanup") ? await cleanupExpiredBackups(rpc, metadata, Date.now(), mode) : 0;
   console.log(JSON.stringify({ uploaded: filename, bytes: bytes.length, downloadChecksumVerified: true, encrypted: true, recoveryKeyUploaded: false, expiredBackupsDeleted }));
 }
 main().catch((error) => { console.error(error instanceof assert.AssertionError ? error.message : "Dropbox backup transfer failed; credentials withheld. Local archive preserved."); process.exitCode = 1; });

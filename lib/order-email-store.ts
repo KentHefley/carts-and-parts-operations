@@ -3,6 +3,7 @@ import { orderView } from "./order-store";
 import { orderEmailTemplate } from "./order-email-template";
 import { deliverEmail, developmentSender, developmentReplyTo, emailConfiguration, EmailPayload, verifyEmailRecipients } from "./email-config";
 import type { OrderView } from "./order-types";
+import { applicationMode } from "./environment-policy";
 
 export class EmailInputError extends Error {}
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,6 +38,7 @@ export async function queueOrderEmail(database: PrismaClient, actorId: string, e
     const to = [...new Set(order.assignments.map(assignment => assignment.user.email.toLowerCase()))];
     verifyEmailRecipients(to);
     const payload = { from: developmentSender, reply_to: developmentReplyTo, to, ...orderEmailTemplate(view) };
+    if (applicationMode() === "pilot") payload.subject = `[PILOT] ${payload.subject}`;
     const message = await transaction.orderEmail.create({ data: { actorId, orderId: order.id, requestKey, payload } });
     await transaction.orderEvent.create({ data: { actorId, orderId: order.id, changes: { event: "SO email queued", recipients: to.join(", ") } } });
     return message.id;

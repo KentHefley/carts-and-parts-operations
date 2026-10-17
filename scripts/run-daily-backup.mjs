@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { backupPattern } from "./backup-retention.mjs";
 
 async function run(script, args) {
   return new Promise((resolve, reject) => {
@@ -13,8 +14,11 @@ async function run(script, args) {
   });
 }
 try {
+  const mode = process.env.BACKUP_ENV ?? "development";
+  const pattern = backupPattern(mode);
   const output = await run("scripts/backup-development.ts", ["backup"]);
-  const filename = output.match(/development-[a-f0-9]{24}\.cnpbackup/)?.[0];
+  const filename = JSON.parse(output.trim()).backup;
+  assert.ok(pattern.test(filename), "Backup filename differs from environment.");
   assert.ok(filename, "Encrypted backup filename missing.");
   const result = await run("scripts/upload-dropbox-backup.mjs", [filename, "--cleanup"]);
   console.log(result.trim());

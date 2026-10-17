@@ -1,10 +1,28 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { expiredBackups, cleanupExpiredBackups } from "../scripts/backup-retention.mjs";
+import { expiredBackups, cleanupExpiredBackups, backupPattern } from "../scripts/backup-retention.mjs";
 
 const now = Date.parse("2026-10-16T10:17:00Z");
 const name = (char) => `development-${char.repeat(24)}.cnpbackup`;
 const file = (char, age = 0) => ({ ".tag": "file", name: name(char), path_lower: `/${name(char)}`, id: `id:${char}`, rev: "abc123", server_modified: new Date(now - age * 86400_000).toISOString() });
+
+test("pilot and development retention cannot delete each other's archives", async () => {
+  const pilotFile = (char, age = 0) => { const entry = file(char, age); return { ...entry, name: entry.name.replace("development-", "pilot-"), path_lower: entry.path_lower.replace("development-", "pilot-") }; };
+  const current = pilotFile("a");
+  const oldPilot = pilotFile("b", 31);
+  const oldDevelopment = file("c", 31);
+  assert.deepEqual(expiredBackups([oldPilot, oldDevelopment], current.name, now, "pilot"), [oldPilot]);
+  assert.deepEqual(expiredBackups([oldPilot, oldDevelopment], name("a"), now), [oldDevelopment]);
+  assert.throws(() => backupPattern("live"));
+  assert.throws(() => backupPattern("../pilot"));
+  await assert.rejects(cleanupExpiredBackups(async () => { throw Error("must not call"); }, current, now));
+  const deleted = [];
+  await cleanupExpiredBackups(async (endpoint, body) => {
+    if (endpoint === "files/list_folder") return { entries: [current, oldPilot, oldDevelopment], has_more: false };
+    deleted.push(body.path); return {};
+  }, current, now, "pilot");
+  assert.deepEqual(deleted, [oldPilot.id]);
+});
 
 test("retention owns exact root archives only and preserves the 30-day boundary", () => {
   const old = file("a", 31);

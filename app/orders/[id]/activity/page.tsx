@@ -1,3 +1,4 @@
+import { environmentLabel } from "../../../../lib/environment-label";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireApprovedUser } from "../../../../lib/access";
@@ -16,5 +17,5 @@ export default async function ActivityPage({ params, searchParams }: { params: P
   const { before } = await searchParams;
   const cursor = typeof before === "string" && /^[0-9a-f-]{36}$/i.test(before) ? before : undefined;
   const completed = terminalStatus((order.fields as Record<string, string>).status);
-  return <AuthenticatedShell title="Sales Order" active={completed ? "Completed Sales Orders" : "Sales Orders"} admin={user.role === "ADMIN"}><main className="order-page"><header className="order-header"><div><p className="development-label">Development</p><h1>DEV-{String(order.number).padStart(6, "0")} · {order.name}</h1></div><Link href={completed ? "/completed-orders" : "/sales-orders"}>{completed ? "Completed Sales Orders" : "Sales Orders"}</Link></header><div className="save-toolbar"><OrderTabs orderId={id} current="activity" /></div><section className="form-section"><h2>Order Activity</h2><ActivityLog orderId={id} cursor={cursor} /></section></main></AuthenticatedShell>;
+  return <AuthenticatedShell title="Sales Order" active={completed ? "Completed Sales Orders" : "Sales Orders"} admin={user.role === "ADMIN"}><main className="order-page"><header className="order-header"><div><p className="development-label">{environmentLabel}</p><h1>DEV-{String(order.number).padStart(6, "0")} · {order.name}</h1></div><Link href={completed ? "/completed-orders" : "/sales-orders"}>{completed ? "Completed Sales Orders" : "Sales Orders"}</Link></header><div className="save-toolbar"><OrderTabs orderId={id} current="activity" /></div><section className="form-section"><h2>Order Activity</h2><ActivityLog orderId={id} cursor={cursor} /></section></main></AuthenticatedShell>;
 }

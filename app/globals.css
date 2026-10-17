@@ -451,3 +451,5 @@ tbody tr:hover { background:var(--soft); }
 .comment-mentions { color:var(--muted); font-size:14px; overflow-wrap:anywhere; }
 .comment-actions, .comment-pages { display:flex; flex-wrap:wrap; gap:10px; margin-block:12px; }
 .activity-list dd { white-space:pre-wrap; overflow-wrap:anywhere; }
+
+.pilot-notice { margin:0 0 1rem; padding:.75rem 1rem; border:1px solid #b45309; border-radius:8px; background:var(--background); color:var(--foreground); font-size:.9rem; }

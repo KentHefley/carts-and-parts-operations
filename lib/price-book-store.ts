@@ -4,6 +4,7 @@ import { Prisma, PrismaClient } from "../generated/prisma/client";
 import type { AttachmentStorage } from "./attachment-storage";
 import { bookKeys, isBookKey, priceBookLimit, validEdition, type BookView } from "./price-book-types";
 import { validAttachmentId } from "./attachment-policy";
+import { applicationMode } from "./environment-policy";
 
 async function admin(tx: Prisma.TransactionClient, actorId: string) {
   const actor = await tx.appUser.findUnique({ where: { id: actorId } });
@@ -36,7 +37,8 @@ export async function beginPriceBook(db: PrismaClient, storage: AttachmentStorag
     }
     if (book.revision !== input.revision) throw new Error("This book changed. Refresh before replacing it.");
     const id = randomUUID();
-    return tx.priceBookFile.create({ data: { id, bookKey: input.key, uploaderId: actorId, requestKey: input.requestKey, baseRevision: input.revision, edition: input.edition, filename: input.filename, size: input.size, stagingKey: `development/price-books/staging/${id}`, storageKey: `development/price-books/current/${id}`, expiresAt: new Date(Date.now() + 15 * 60_000) } });
+    const namespace = applicationMode();
+    return tx.priceBookFile.create({ data: { id, bookKey: input.key, uploaderId: actorId, requestKey: input.requestKey, baseRevision: input.revision, edition: input.edition, filename: input.filename, size: input.size, stagingKey: `${namespace}/price-books/staging/${id}`, storageKey: `${namespace}/price-books/current/${id}`, expiresAt: new Date(Date.now() + 15 * 60_000) } });
   }, { timeout: 30_000 });
   const seconds = Math.min(600, Math.floor((file.expiresAt.getTime() - Date.now()) / 1000) - 60);
   if (seconds < 1) throw new Error("Upload expired.");
