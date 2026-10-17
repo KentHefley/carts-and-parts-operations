@@ -1,0 +1,19 @@
+# Local credentials, recovery material, tools and temporary reports are never source uploads.
+.env*
+*.pem
+.git/
+.vercel/
+.agents/
+.codex/
+.recovery/
+.recovery-tools/
+tmp/
+node_modules/
+.next/
+coverage/
+out/
+build/
+*.tsbuildinfo
+# Recreated by the existing prebuild script on Vercel.
+generated/prisma/
+public/pdfjs/
