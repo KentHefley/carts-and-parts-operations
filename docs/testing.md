@@ -1,5 +1,9 @@
 # Development verification
 
+October 16 recovery drill: PostgreSQL 18.6 custom-format backup and restore verified 25 public tables against deterministic row fingerprints. Three real price-book PDFs (14,606,434 bytes) restored to a unique private R2 prefix and matched SHA-256 checksums. Isolated database/files cleaned successfully. No READY order attachments existed; populated order/file association recovery remains pending. See backup-restoration.md. Focused ESLint and TypeScript passed; no application code changed.
+
+October 16 pilot review: all 15 guarded development regression groups passed, including 40 unit tests. Three new Hours Worked tests, focused lint and final production build passed. See `pilot-readiness-2026-10-16.md` for exact coverage, browser evidence and remaining signed-in/provider/backup/hosted gates. Price-book lifecycle was intentionally not rerun against the three configured books.
+
 October 15 field-editor regression: actual FieldSettings component tested with fake persisted actions and compiled CSS. Selecting the bottom field scrolled/focused its editor at 110px below a sticky header. Deactivate enabled adjacent Review & Save, focused the preview without writing, then Save Layout wrote inactive state and focused success feedback. Reload retained inactive state. No browser errors or 390px horizontal overflow. The fixture did not alter Kent's real field. Focused lint and final production build passed; Next diagnostics checked separately.
 
 ## October 15 custom fields

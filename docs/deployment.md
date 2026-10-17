@@ -6,6 +6,8 @@ No live launch or deployment is authorized by this document. Storage currently f
 
 ## Trash cleanup
 
+Development backup/restore procedure and October 16 verified drill are in [backup-restoration.md](backup-restoration.md). Local encrypted archives and their separate key are ignored under .recovery/. Independent company-controlled archive/key storage and automated scheduling are still required; local recovery verification is not a configured production backup service.
+
 Orders enter Trash for 30 elapsed days. Restoration stops at expiration. Physical removal occurs on the next successful cleanup; storage outages can delay removal. Admins can run Administration → Trash → Clean Expired Trash. Localhost has no automatic scheduler. The guarded local command is `npm run cleanup:trash:development`; it checks the exact development target before making changes.
 
 Source includes `/api/maintenance/trash` and a daily 09:00 UTC schedule in vercel.json. Before an authorized hosted deployment, add a server-only, randomly generated CRON_SECRET of at least 32 characters to the intended Vercel environment, and verify the database/bucket/Clerk targets. The route refuses missing/incorrect secrets and live targets. Preview deployments must never receive live credentials. Hosted scheduling is not verified or activated by local testing.

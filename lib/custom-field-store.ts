@@ -1,13 +1,13 @@
 import { createHash } from "node:crypto";
 import { Prisma, PrismaClient } from "../generated/prisma/client";
-import { customKey, customTypes, defaultLayout, employeeIds, formSections, type FieldLayout, type LayoutField } from "./custom-field-model";
+import { customKey, customTypes, defaultLayout, employeeIds, formSections, includeHoursWorked, type FieldLayout, type LayoutField } from "./custom-field-model";
 
 type Tx = Prisma.TransactionClient;
 export class FieldSettingsError extends Error {}
 export async function lockFields(tx: Tx) { await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('order-custom-fields'))`; }
 export async function readFieldLayout(db: PrismaClient | Tx): Promise<FieldLayout> {
   const record = await db.orderFieldLayout.findUnique({ where: { id: "orders" } });
-  return record ? { version: record.version, fields: record.definitions as unknown as LayoutField[] } : defaultLayout();
+  return record ? { version: record.version, fields: includeHoursWorked(record.definitions as unknown as LayoutField[]) } : defaultLayout();
 }
 async function administrator(tx: Tx, actorId: string) {
   const actor = await tx.appUser.findUnique({ where: { id: actorId } });

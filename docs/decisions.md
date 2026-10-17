@@ -1,5 +1,9 @@
 # Decisions and unresolved details
 
+October 16 latest Hours Worked display correction: Kent requires exact hours and minutes, replacing the earlier two-decimal display. 7:20 AM–3:30 PM shows 8h 10m; 9:30 PM–3:24 AM shows 5h 54m. Blank/overnight/equal-zero behavior remains unchanged. No minute rounding or price calculation is introduced.
+
+October 16 Hours Worked resolved: Kent approved blank until both times are entered, ordinary subtraction, overnight when Time Out is earlier, zero for equal times, and two decimal places. Implemented as a read-only derived field in Service and Labor, including existing saved layouts. This supersedes older unresolved Hours Worked edge-case notes below; manual labor/travel pricing remains separate.
+
 October 15 custom-field review resolved: Kent approved `custom-fields-milestone.md`. Currency remains available for future fields with flexible input normalization; existing price fields stay unchanged. Approved placement, type-change, copy, print, deactivation, deletion/history and employee-selection rules supersede earlier unresolved custom-field details. Implemented locally; authenticated review pending.
 
 October 14 user deletion now authorized: Super Admin-only permanent login deletion; other admins retain deactivate/reactivate. Company identities and references remain as inactive historical records. Use Clerk deleteUser, with durable local access block before the provider request and retry for uncertain/failed provider deletion. Already-absent Clerk identities count as completed deletion. No ordinary reactivation/reinvite for deleted records; rehiring and permission delegation require later reviewed features. No company orders/files are deleted by user deletion.

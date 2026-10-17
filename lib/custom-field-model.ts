@@ -12,7 +12,13 @@ const special: FieldDefinition[] = [
   { key: "status", label: "Status", type: "status" },
 ].map(field => ({ ...field, section: "Order Overview" }));
 export function defaultLayout(): FieldLayout {
-  return { version: 0, fields: formSections.flatMap(section => [...special, ...orderFields].filter(field => field.section === section).map(field => ({ ...field, options: field.options ?? [], help: "", active: true, custom: false, used: false, revision: 1 }))) };
+  return { version: 0, fields: includeHoursWorked(formSections.flatMap(section => [...special, ...orderFields].filter(field => field.section === section).map(field => ({ ...field, options: field.options ?? [], help: "", active: true, custom: false, used: false, revision: 1 })))) };
+}
+export function includeHoursWorked(fields: LayoutField[]): LayoutField[] {
+  if (fields.some(field => field.key === "hoursWorked")) return fields;
+  const result = [...fields], index = result.findIndex(field => field.key === "hour6__1");
+  result.splice(index < 0 ? result.length : index + 1, 0, { key: "hoursWorked", label: "Hours Worked", section: "Service and Labor", type: "calculated", help: "Calculated from Time In and Time Out. Earlier Time Out means overnight; equal times mean zero hours.", options: [], active: true, custom: false, used: false, revision: 1 });
+  return result;
 }
 export function employeeIds(value: string): string[] {
   if (!value) return [];

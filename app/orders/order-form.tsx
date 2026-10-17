@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { defaultLayout, displayCustom, formSections, type FieldLayout } from "../../lib/custom-field-model";
 import { CustomFieldInput } from "./custom-field-input";
+import { hoursWorked } from "../../lib/hours-worked";
 import { AssignableUser, ItemValue, OrderView } from "../../lib/order-types";
 import { duplicateOrder, persistOrder } from "./actions";
 import { missingCloseout, orderStatuses, terminalStatus } from "../../lib/order-status";
@@ -210,7 +211,8 @@ export function OrderForm({ initial, users, layout = fallbackLayout, choices = {
           <small id="invoice-copy-help">Copies Invoice name, address, city, state, ZIP and phone into Store fields, replacing their current values. You can edit them afterward. Unchecking keeps the copied values.</small>
         </div>}
         {!field.custom && !["name","soNumber","dateEntered","submittedBy","status","text_79__1","closed_out_date4__1"].includes(field.key) && <label>{field.label}
-          {field.type === "select" ? <select value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)}><option value="">—</option>{retainedChoice(managedChoice(field.key) ? choices[field.key] ?? [] : field.options, fields[field.key] ?? "") && <option value={fields[field.key]} disabled>{fields[field.key]} (saved value; unavailable for new selections)</option>}{(managedChoice(field.key) ? choices[field.key] ?? [] : field.options).map(option => <option key={option}>{option}</option>)}</select>
+          {field.key === "hoursWorked" ? <input readOnly value={hoursWorked(fields.hour__1 ?? "", fields.hour6__1 ?? "")} />
+            : field.type === "select" ? <select value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)}><option value="">—</option>{retainedChoice(managedChoice(field.key) ? choices[field.key] ?? [] : field.options, fields[field.key] ?? "") && <option value={fields[field.key]} disabled>{fields[field.key]} (saved value; unavailable for new selections)</option>}{(managedChoice(field.key) ? choices[field.key] ?? [] : field.options).map(option => <option key={option}>{option}</option>)}</select>
             : field.type === "date" ? <DateField label={field.label} value={fields[field.key] ?? ""} onChange={value => update(field.key, value)} />
             : field.type === "textarea" ? <textarea value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />
               : <input type={field.type} step={field.type === "number" ? "any" : undefined} value={fields[field.key] ?? ""} onChange={event => update(field.key, event.target.value)} />}
