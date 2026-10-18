@@ -5,6 +5,7 @@ import { createDatabaseClient } from "../lib/database-client";
 import { listOrders, loadOrder, reserveOrder, saveOrder } from "../lib/order-store";
 import { readActivity } from "../lib/activity-store";
 import { chicagoDate } from "../lib/order-types";
+import { buildReport } from "../lib/report-model";
 
 async function main() {
   const { databaseUrl } = developmentCredentials();
@@ -37,6 +38,20 @@ async function main() {
       assert.equal(nteSaved.ok, true);
       order = await loadOrder(database, order.id);
       assert.equal(order.fields.text_12__1, nte);
+    }
+    for (const [typed, stored, total] of [["126", "126", "282.85"], ["126.00", "126", "282.85"], ["$126.00", "126", "282.85"], ["$1,260.00", "1260", "2550.85"]]) {
+      const formatted = await saveOrder(database, first.id, { id: order.id, base: order.fields, patch: {}, baseItems: order.items, items: order.items.map((item, index) => index === 0 ? { ...item, quantity: "2", unitPrice: typed } : item) });
+      assert.equal(formatted.ok, true);
+      order = await loadOrder(database, order.id);
+      assert.equal(order.items[0].unitPrice, stored);
+      const record = await database.salesOrder.findUniqueOrThrow({ where: { id: order.id }, include: { items: true, assignments: { include: { user: true } } } });
+      assert.equal(buildReport([record], { kind: "sales", from: order.fields.dateEntered, to: order.fields.dateEntered, query: "" }).subtotal, total);
+    }
+    for (const unitPrice of ["$1,26.00", "126.001", "quoted"]) {
+      const invalidPrice = await saveOrder(database, first.id, { id: order.id, base: order.fields, patch: {}, baseItems: order.items, items: order.items.map((item, index) => index === 0 ? { ...item, unitPrice } : item) });
+      assert.equal(invalidPrice.ok, false);
+      if (!invalidPrice.ok) assert.match(invalidPrice.message, /Item 1 Unit Price/);
+      assert.deepEqual(await loadOrder(database, order.id), order);
     }
     const original = order;
     const originalEvents = await database.orderEvent.count({ where: { orderId: order.id } });

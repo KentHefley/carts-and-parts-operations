@@ -453,3 +453,7 @@ tbody tr:hover { background:var(--soft); }
 .activity-list dd { white-space:pre-wrap; overflow-wrap:anywhere; }
 
 .pilot-notice { margin:0 0 1rem; padding:.75rem 1rem; border:1px solid #b45309; border-radius:8px; background:var(--background); color:var(--foreground); font-size:.9rem; }
+
+.item-save-warning, .save-toolbar .save-alert { flex-basis:100%; margin:0; padding:.5rem .75rem; border:1px solid #c2410c; background:var(--background); color:var(--foreground); }
+.item-field-error { display:block; margin-top:.35rem; color:var(--foreground); font-weight:600; }
+.item-rows input[aria-invalid="true"] { border:2px solid #c2410c; }

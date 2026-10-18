@@ -6,6 +6,7 @@ import { missingCloseout, orderStatuses, protectedStatusFields, terminalStatus }
 import { managedChoice } from "./order-choice-policy";
 import { FieldSettingsError, lockFields, readFieldLayout, validateCustomPatch, writeLayout } from "./custom-field-store";
 import { customKey } from "./custom-field-model";
+import { itemNumberErrors, normalizeUnitPrice } from "./item-price";
 
 const include = { customAmounts: true, items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true, displayName: true } }, assignments: { orderBy: { userId: "asc" as const } } };
 type StoredOrder = Prisma.SalesOrderGetPayload<{ include: typeof include }>;
@@ -79,10 +80,9 @@ function validateItems(items: ItemValue[]) {
   if (!Array.isArray(items) || items.length < 3 || items.length > 200) throw new InputError("Use 3–200 item rows.");
   for (const item of items) {
     if (!item || typeof item.description !== "string" || item.description.length > 10_000) throw new InputError("Invalid item description.");
-    for (const [key, places] of [["quantity", 6], ["unitPrice", 2]] as const) {
-      if (typeof item[key] !== "string" || (item[key] !== "" && !new RegExp(`^-?\\d{1,14}(\\.\\d{1,${places}})?$`).test(item[key]))) throw new InputError(`Invalid ${key}; use at most ${places} decimal places.`);
-    }
   }
+  const error = itemNumberErrors(items)[0];
+  if (error) throw new InputError(`Item ${error.index + 1} ${error.field === "unitPrice" ? "Unit Price" : "Quantity"}: ${error.message}`);
 }
 
 function validateFields(fields: Record<string, string>) {
@@ -109,6 +109,9 @@ export async function saveOrder(database: PrismaClient, actorId: string, request
     if (request.closeoutMode !== undefined && (request.closeoutMode !== "quick" || !terminalStatus(request.patch.status))) throw new InputError("Quick close requires Complete or Voided status.");
     if (request.items) validateItems(request.items);
     if (request.baseItems) validateItems(request.baseItems);
+    // Normalize both sides before conflict comparisons, audit snapshots and decimal persistence.
+    const normalized = (items: ItemValue[]) => items.map(item => ({ ...item, unitPrice: normalizeUnitPrice(item.unitPrice)! }));
+    request = { ...request, ...(request.items ? { items: normalized(request.items) } : {}), ...(request.baseItems ? { baseItems: normalized(request.baseItems) } : {}) };
     for (const ids of [request.assigneeIds, request.baseAssigneeIds]) if (ids !== undefined && (!Array.isArray(ids) || ids.some(id => typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) || new Set(ids).size !== ids.length)) throw new InputError("Assignments must contain each user only once.");
     if (request.assigneeIds && !request.baseAssigneeIds) throw new InputError("Missing previous assignments.");
   } catch (error) {

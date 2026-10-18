@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { defaultLayout, displayCustom, formSections, type FieldLayout } from "../../lib/custom-field-model";
 import { CustomFieldInput } from "./custom-field-input";
+import { itemNumberErrors } from "../../lib/item-price";
 import { hoursWorked } from "../../lib/hours-worked";
 import { AssignableUser, ItemValue, OrderView } from "../../lib/order-types";
 import { duplicateOrder, persistOrder } from "./actions";
@@ -42,6 +43,8 @@ export function OrderForm({ initial, users, layout = fallbackLayout, choices = {
   const [items, setItems] = useState(initial.items);
   const [assigneeIds, setAssigneeIds] = useState(initial.assigneeIds);
   const [feedback, setFeedback] = useState(initial.fields.name ? "Saved" : "Enter Name to save");
+  const [itemsReviewed, setItemsReviewed] = useState(false);
+  const itemErrors = itemsReviewed ? itemNumberErrors(items) : [];
   const [conflict, setConflict] = useState(false);
   const [reloadOpen, setReloadOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -68,6 +71,7 @@ export function OrderForm({ initial, users, layout = fallbackLayout, choices = {
   const save = useCallback(async () => {
     if (saving.current || blocked.current) return false;
     const snapshot = latest.current;
+    if (itemNumberErrors(snapshot.items).length) { setItemsReviewed(true); setFeedback("Unsaved changes — review the highlighted item fields."); return false; }
     const quick = quickClose.current === snapshot.fields.status;
     const patch = Object.fromEntries(Object.entries(snapshot.fields).filter(([key, value]) => value !== (saved.current.fields[key] ?? "")));
     const itemsChanged = JSON.stringify(snapshot.items) !== JSON.stringify(saved.current.items);
@@ -184,10 +188,10 @@ export function OrderForm({ initial, users, layout = fallbackLayout, choices = {
         }
       }}>{terminalStatus(baseline.fields.status) ? "Completed Sales Orders" : "Sales Orders"}</Link>
     </header>
-    <div className="save-toolbar"><OrderTabs orderId={initial.id} current="details" /><span aria-live="polite" role="status">{copyBusy ? "Copying order…" : feedback}</span><button type="button" disabled={busy || conflict || emailBusy || copyBusy} onClick={() => void copy()}>{copyBusy ? "Copying…" : "Copy Order"}</button><button disabled={busy || conflict || emailBusy || copyBusy} onClick={() => void save()}>Save now</button></div>
+    <div className="save-toolbar"><OrderTabs orderId={initial.id} current="details" /><span aria-live="polite" role="status">{copyBusy ? "Copying order…" : feedback}</span><button type="button" disabled={busy || conflict || emailBusy || copyBusy} onClick={() => void copy()}>{copyBusy ? "Copying…" : "Copy Order"}</button><button disabled={busy || conflict || emailBusy || copyBusy} onClick={() => void save()}>Save now</button>{itemErrors.length > 0 && <div className="item-save-warning" role="alert">Your changes are not saved. Check the highlighted Quantity or Unit Price fields. <button type="button" onClick={() => { const error = itemErrors[0]; const input = document.getElementById(`item-${error.index}-${error.field}`); input?.closest("details")?.setAttribute("open", ""); input?.scrollIntoView({ block: "center", behavior: "instant" }); input?.focus({ preventScroll: true }); }}>Review item errors</button></div>}{conflict && <div className="save-alert" role="alert"><p>{feedback}</p><button onClick={() => { blocked.current = false; setConflict(false); void save(); }}>Retry save</button><button onClick={() => setReloadOpen(true)}>Reload saved values</button></div>}</div>
     {copyError && <div className="save-alert" role="alert"><p>{copyError}</p><button type="button" onClick={() => setCopyError("")}>Dismiss</button></div>}
     {toast && <EmailToast {...toast} onClose={dismissEmailToast} />}
-    {conflict && <div className="save-alert" role="alert"><p>{feedback}</p><button onClick={() => { blocked.current = false; setConflict(false); void save(); }}>Retry save</button><button onClick={() => setReloadOpen(true)}>Reload saved values</button></div>}
+
     {reloadOpen && <ConfirmationDialog title="Reload saved values?" description="Your unsaved input will be discarded and replaced with the saved order values." confirmLabel="Reload Saved Values" onCancel={() => setReloadOpen(false)} onConfirm={() => { discardConfirmed.current = true; window.location.reload(); }} />}
     <form onClick={() => { if (toast?.success) dismissEmailToast(); }} onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset className="email-form-lock" disabled={emailBusy || copyBusy}>
@@ -228,7 +232,7 @@ export function OrderForm({ initial, users, layout = fallbackLayout, choices = {
         <div className="closeout-actions"><button type="button" disabled={busy || conflict || fields.status === "Complete"} onClick={() => changeStatus("Complete")}>Mark Complete</button><button type="button" disabled={busy || conflict || fields.status === "Voided"} onClick={() => changeStatus("Voided")}>Mark Voided</button></div>
       </>}
       {section === "Additional Information" && <div className="assignment-picker"><h3>Assigned To</h3><ul>{assigneeIds.map(id => { const user = users.find(user => user.id === id); return <li key={id}>{user?.displayName || user?.email || "Unavailable user"}{user && !user.active ? " (inactive)" : ""} <button type="button" aria-label={`Remove ${user?.displayName || user?.email || "user"}`} onClick={() => { setAssigneeIds(current => current.filter(value => value !== id)); if (!conflict) setFeedback("Unsaved changes"); }}>Remove</button></li>; })}</ul><div className="assignment-actions"><label>Add employee<select value="" onChange={event => { if (event.target.value) { setAssigneeIds(current => [...new Set([...current, event.target.value])].sort()); if (!conflict) setFeedback("Unsaved changes"); } }}><option value="">Choose an employee</option>{users.filter(user => user.active && !assigneeIds.includes(user.id)).map(user => <option key={user.id} value={user.id}>{user.displayName || user.email}</option>)}</select></label>{canSendEmail && <div className="email-placeholder"><button className="primary-button" type="button" disabled={busy || conflict || emailBusy || (!emailId && !assigneeIds.length)} onClick={() => void sendEmail()} aria-describedby="email-test-notice">{emailBusy ? "Sending…" : emailId ? "Retry SO Email" : "Send SO Email"}</button><small id="email-test-notice">{emailId ? "Retry sends the original saved email snapshot." : "Development: assigned recipients must be kent@cartsandparts.com."}</small></div>}</div></div>}
-      {section === "Items and Pricing" && <div className="item-rows">{items.map((item, index) => <fieldset key={index}><legend>Item {index + 1}</legend><label>Quantity<input inputMode="decimal" value={item.quantity} onChange={event => updateItem(index, "quantity", event.target.value)} /></label><label>Description<input value={item.description} onChange={event => updateItem(index, "description", event.target.value)} /></label><label>Unit Price<input inputMode="decimal" value={item.unitPrice} onChange={event => updateItem(index, "unitPrice", event.target.value)} /></label></fieldset>)}<button type="button" onClick={() => { setItems(current => [...current, { description: "", quantity: "", unitPrice: "" }]); if (!conflict) setFeedback("Unsaved changes"); }}>+ Add Item</button></div>}
+      {section === "Items and Pricing" && <div className="item-rows">{items.map((item, index) => <fieldset key={index}><legend>Item {index + 1}</legend><label>Quantity<input id={`item-${index}-quantity`} inputMode="decimal" aria-invalid={itemErrors.some(error => error.index === index && error.field === "quantity") || undefined} aria-describedby={itemErrors.some(error => error.index === index && error.field === "quantity") ? `item-${index}-quantity-error` : undefined} value={item.quantity} onChange={event => updateItem(index, "quantity", event.target.value)} />{itemErrors.filter(error => error.index === index && error.field === "quantity").map(error => <small className="item-field-error" id={`item-${index}-quantity-error`} key={error.field}>{error.message}</small>)}</label><label>Description<input value={item.description} onChange={event => updateItem(index, "description", event.target.value)} /></label><label>Unit Price<input id={`item-${index}-unitPrice`} type="text" inputMode="text" aria-invalid={itemErrors.some(error => error.index === index && error.field === "unitPrice") || undefined} aria-describedby={itemErrors.some(error => error.index === index && error.field === "unitPrice") ? `item-${index}-unitPrice-error` : undefined} value={item.unitPrice} onChange={event => updateItem(index, "unitPrice", event.target.value)} />{itemErrors.filter(error => error.index === index && error.field === "unitPrice").map(error => <small className="item-field-error" id={`item-${index}-unitPrice-error`} key={error.field}>{error.message}</small>)}</label></fieldset>)}<button type="button" onClick={() => { setItems(current => [...current, { description: "", quantity: "", unitPrice: "" }]); if (!conflict) setFeedback("Unsaved changes"); }}>+ Add Item</button></div>}
       </details>)}
       </fieldset>
     </form>
