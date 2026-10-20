@@ -1,7 +1,15 @@
 import { Prisma } from "../generated/prisma/client";
 import { DateTime } from "luxon";
 
-export type ReportFilter = { kind: "sales" | "products" | "customer"; from: string; to: string; query: string };
+export type ReportStatus = "all" | "open" | "completed";
+export type ReportFilter = { kind: "sales" | "products" | "customer"; from: string; to: string; query: string; status: ReportStatus };
+export const reportStatusLabels = { all: "All Orders", open: "Open Orders", completed: "Completed Orders" };
+export function reportStatuses(status: ReportStatus) {
+  if (status === "open") return ["Pending", "In Progress", "Expedite"];
+  if (status === "completed") return ["Complete"];
+  if (status === "all") return ["Pending", "In Progress", "Expedite", "Complete"];
+  throw new Error("Choose All, Open or Completed orders.");
+}
 export type ReportOrder = { id: string; number: number; name: string | null; deletedAt: Date | null; fields: unknown; items: { description: string; quantity: { toString(): string } | null; unitPrice: { toString(): string } | null }[]; assignments: { user: { displayName: string | null; email: string } }[] };
 const D = Prisma.Decimal.clone({ precision: 60 });
 // Use explicit rounding; never mutate Decimal's shared global configuration.
@@ -11,12 +19,14 @@ const productTerms = (query: string) => [...new Set(query.split(",").map(term =>
 export function reportFilter(input: Record<string, string | string[] | undefined>): ReportFilter {
   const one = (key: string) => { const value = input[key]; if (Array.isArray(value)) throw new Error("Use one value per report filter."); return value ?? ""; };
   const kind = one("kind") || "sales", from = one("from"), to = one("to"), query = one("query").trim();
+  const status = one("status") || "all";
+  if (!["all", "open", "completed"].includes(status)) throw new Error("Choose All, Open or Completed orders.");
   if (!["sales", "products", "customer"].includes(kind)) throw new Error("Choose a report type.");
   if (![from, to].every(validDate) || from > to) throw new Error("Choose a valid Date Entered range with the start on or before the end.");
   if (query.length > 200) throw new Error("Use a search of 200 characters or fewer.");
   if (kind !== "sales" && !query) throw new Error(kind === "products" ? "Enter a product number or description to search." : "Enter an Invoice To customer name to search.");
   if (kind === "products" && !productTerms(query).length) throw new Error("Enter at least one product search term, separated by commas.");
-  return { kind: kind as ReportFilter["kind"], from, to, query: kind === "sales" ? "" : query };
+  return { kind: kind as ReportFilter["kind"], from, to, query: kind === "sales" ? "" : query, status: status as ReportStatus };
 }
 function validDate(value: string) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && DateTime.fromISO(value).isValid && DateTime.fromISO(value).toISODate() === value; }
 function numeric(value: string) {
@@ -31,13 +41,14 @@ export function money(value: string | null) {
   return `${whole.startsWith("-") ? "-" : ""}$${whole.replace("-", "").replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${fraction}`;
 }
 export function buildReport(orders: ReportOrder[], filter: ReportFilter) {
+  const statuses = reportStatuses(filter.status);
   const terms = productTerms(filter.query);
   const groups = new Map<string, { description: string; quantity: Prisma.Decimal; total: Prisma.Decimal; orders: Set<string>; invalid: boolean }>();
   const rows: { id: string; number: string; name: string; date: string; customer: string; status: string; division: string; jobType: string; scheduled: string; assigned: string; subtotal: string | null; matching: string | null; issues: string[] }[] = [];
   let subtotal = new D(0), matchingTotal = new D(0), quantityTotal = new D(0), invalidOrders = 0, invalidProducts = false;
   for (const order of orders) {
     const fields = (order.fields ?? {}) as Record<string, string>;
-    if (order.deletedAt || !order.name?.trim() || !["Pending", "In Progress", "Expedite", "Complete"].includes(fields.status) || !validDate(fields.dateEntered ?? "") || fields.dateEntered < filter.from || fields.dateEntered > filter.to) continue;
+    if (order.deletedAt || !order.name?.trim() || !statuses.includes(fields.status) || !validDate(fields.dateEntered ?? "") || fields.dateEntered < filter.from || fields.dateEntered > filter.to) continue;
     if (filter.kind === "customer" && !normal(fields.text_13__1 ?? "").includes(normal(filter.query))) continue;
     const matching = order.items.filter(item => terms.some(term => normal(item.description).replace(/\s/g, "").includes(term)));
     if (filter.kind === "products" && !matching.length) continue;

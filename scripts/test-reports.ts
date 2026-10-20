@@ -18,6 +18,14 @@ async function main() {
     const products = await loadReport(db, users[0], { ...filter, kind: "products" });
     assert.equal(products.groups.length, 1); assert.equal(products.groups[0].orders, 2);
     assert.equal(products.quantity, "7"); assert.equal(products.matchingTotal, "81.70");
+    for (const kind of ["sales", "products", "customer"] as const) {
+      const open = await loadReport(db, users[0], { ...filter, kind, status: "open" });
+      const completed = await loadReport(db, users[0], { ...filter, kind, status: "completed" });
+      assert.deepEqual(open.rows.map(row => row.status), ["Pending"]);
+      assert.deepEqual(completed.rows.map(row => row.status), ["Complete"]);
+      assert.equal(open.subtotal, "45.85"); assert.equal(completed.subtotal, "45.85");
+      if (kind === "products") { assert.equal(open.quantity, "3.5"); assert.equal(completed.matchingTotal, "40.85"); }
+    }
     await db.appUser.update({ where: { id: users[0] }, data: { active: false } });
     await assert.rejects(loadReport(db, users[0], filter), /Administrator/);
     console.log("PASS: report database date/status/Trash filters, product grouping, totals and admin/inactive-user permissions.");

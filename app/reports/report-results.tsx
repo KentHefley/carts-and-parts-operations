@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { money, type buildReport, type ReportFilter } from "../../lib/report-model";
+import { reportStatusLabels, reportStatuses, money, type buildReport, type ReportFilter } from "../../lib/report-model";
 import { ReportDownloads } from "./report-downloads";
 export function ReportResults({ result, filter, page }: { result: ReturnType<typeof buildReport>; filter: ReportFilter; page: number }) {
   const size = 50, last = Math.max(1, Math.ceil(result.rows.length / size)), current = Math.min(page, last);
   const pageHref = (value: number) => `/reports?${new URLSearchParams({ ...filter, run: "1", page: String(value) })}`;
   return <>
     <ReportDownloads filter={filter} />
-    <p className="screen-caption">Date Entered: {filter.from} through {filter.to}, inclusive · America/Chicago · Pending, In Progress, Expedite and Complete · Voided and Trash excluded.{filter.query && <> Search {filter.kind === "products" ? "matches any comma-separated term" : "contains"}: “{filter.query}”.</>}</p>
+    <p className="screen-caption">Date Entered: {filter.from} through {filter.to}, inclusive · America/Chicago · {reportStatusLabels[filter.status]}: {reportStatuses(filter.status).join(", ")} · Voided and Trash excluded.{filter.query && <> Search {filter.kind === "products" ? "matches any comma-separated term" : "contains"}: “{filter.query}”.</>}</p>
     <div className="report-summary"><section className="content-panel"><h2>Matching Orders</h2><strong>{result.rows.length}</strong></section>
       {filter.kind === "products" && <><section className="content-panel"><h2>Matching Quantity</h2><strong>{result.quantity}</strong></section><section className="content-panel"><h2>Matching Product Total</h2><strong>{money(result.matchingTotal)}</strong></section></>}
       <section className="content-panel"><h2>{filter.kind === "products" ? "Full Matching-Order Subtotal" : filter.kind === "customer" ? "Customer Order Subtotal" : "Order Subtotal"}</h2><strong>{money(result.subtotal)}</strong></section>

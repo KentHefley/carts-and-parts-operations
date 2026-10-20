@@ -27,7 +27,10 @@ test("pilot service targets and hosted project must match explicitly", () => {
 });
 
 test("pilot email and invitations fail closed outside the approved list", () => {
-  const env = { ...pilot, SO_EMAIL_ALLOWED_RECIPIENTS: "kent@cartsandparts.com,daryl@cartsandparts.com,jake@cartsandparts.com" };
+  const env = { ...pilot, SO_EMAIL_ALLOWED_RECIPIENTS: "kent@cartsandparts.com,daryl@cartsandparts.com,jake@cartsandparts.com,suziah@cartsandparts.com" };
+  assert.doesNotThrow(() => verifyEmailRecipients(["SUZIAH@cartsandparts.com"], env));
+  assert.throws(() => verifyEmailRecipients(["suziah@cartsandparts.com"], { ...env, SO_EMAIL_ALLOWED_RECIPIENTS: "kent@cartsandparts.com" }));
+  assert.deepEqual(invitationConfiguration({ ...pilot, APP_URL: "https://fixture.example", INVITATION_ALLOWED_RECIPIENTS: env.SO_EMAIL_ALLOWED_RECIPIENTS }).allowed, env.SO_EMAIL_ALLOWED_RECIPIENTS.split(","));
   assert.doesNotThrow(() => verifyEmailRecipients(["DARYL@cartsandparts.com", "jake@cartsandparts.com"], env));
   assert.throws(() => verifyEmailRecipients(["kent@cartsandparts.com", "other@example.com"], env));
   assert.throws(() => verifyEmailRecipients(["kent@cartsandparts.com"], pilot));

@@ -4,10 +4,22 @@ import ExcelJS from "exceljs";
 import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import { buildReport, reportFilter, type ReportOrder } from "../lib/report-model";
-import { reportCsv, reportExcel, reportPdf, safeSpreadsheetText } from "../lib/report-export";
+import { reportCsv, reportExcel, reportPdf, safeSpreadsheetText, exportTables } from "../lib/report-export";
 const filter = reportFilter({ kind: "products", from: "2026-10-01", to: "2026-10-31", query: "CW2" });
 const order: ReportOrder = { id: "synthetic", number: 1, name: '=HYPERLINK("evil")', deletedAt: null, fields: { status: "Complete", dateEntered: "2026-10-01", text_13__1: "Customer, Inc.\nSecond line", text06__1: "10", text0__1: "5" }, items: [{ description: "+CW2 refill kit", quantity: "2.5", unitPrice: "12.34" }], assignments: [] };
 const result = buildReport([order], filter);
+
+test("status-filtered downloads contain the chosen scope and only its matching rows", async () => {
+  const orders = [{ ...order, number: 1 }, { ...order, id: "open", number: 2, fields: { ...(order.fields as Record<string, string>), status: "Expedite" } }];
+  for (const [status, label, expected, excluded] of [["open", "Open Orders", "DEV-000002", "DEV-000001"], ["completed", "Completed Orders", "DEV-000001", "DEV-000002"]] as const) {
+    const scoped = { ...filter, status }, results = buildReport(orders, scoped);
+    assert.deepEqual(exportTables(results, scoped).summary.find(row => row[0] === "Order Status"), ["Order Status", label]);
+    const csv = reportCsv(results, scoped); assert.ok(csv.includes(label)); assert.ok(csv.includes(expected)); assert.ok(!csv.includes(excluded));
+    const book = new ExcelJS.Workbook(); await book.xlsx.load(new Uint8Array(await reportExcel(results, scoped)).buffer);
+    assert.equal(book.getWorksheet("Orders")!.rowCount, 2); assert.equal(book.getWorksheet("Orders")!.getCell("A2").value, expected);
+    const pdf = await PDFDocument.load(await reportPdf(results, scoped)); assert.ok(pdf.getPageCount() >= 1);
+  }
+});
 test("CSV includes metadata, all sections and safely quotes formulas, commas and newlines", () => {
   const csv = reportCsv(result, filter);
   assert.ok(csv.startsWith("\uFEFF")); assert.match(csv, /Date Entered, inclusive/);

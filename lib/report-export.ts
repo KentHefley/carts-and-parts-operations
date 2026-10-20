@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { type buildReport, type ReportFilter } from "./report-model";
+import { reportStatusLabels, reportStatuses, type buildReport, type ReportFilter } from "./report-model";
 type Result = ReturnType<typeof buildReport>;
 type Cell = string | number;
 export const safeSpreadsheetText = (value: string) => /^[\s\u0000-\u001f]*[=+@-]/.test(value) ? `'${value}` : value;
@@ -9,7 +9,7 @@ export function exportTables(result: Result, filter: ReportFilter, generated = n
     ["Report", { sales: "Sales by Date", products: "Products", customer: "Invoice Customer" }[filter.kind]],
     ["Date basis", "Date Entered, inclusive; America/Chicago"], ["From", filter.from], ["Through", filter.to], [filter.kind === "products" ? "Search terms (match any)" : "Search contains", filter.query || "All"],
     ["Generated (CT)", new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(generated)],
-    ["Statuses", "Pending, In Progress, Expedite, Complete; Voided and Trash excluded"], ["Matching Orders", result.rows.length],
+    ["Order Status", reportStatusLabels[filter.status]], ["Statuses", `${reportStatuses(filter.status).join(", ")}; Voided and Trash excluded`], ["Matching Orders", result.rows.length],
     ...(filter.kind === "products" ? [["Matching Quantity", numeric(result.quantity)], ["Matching Product Total", numeric(result.matchingTotal)]] : []),
     [filter.kind === "products" ? "Full Matching-Order Subtotal" : filter.kind === "customer" ? "Customer Order Subtotal" : "Order Subtotal", numeric(result.subtotal)],
     ["Calculation", "Item quantity x unit price + Labor Price + Travel Price. Round each charge to cents, half-up, then sum. Blank optional amounts = zero."],

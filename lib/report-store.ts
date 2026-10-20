@@ -1,5 +1,5 @@
 import { PrismaClient } from "../generated/prisma/client";
-import { buildReport, type ReportFilter } from "./report-model";
+import { buildReport, reportStatuses, type ReportFilter } from "./report-model";
 
 export async function loadReport(db: PrismaClient, actorId: string, filter: ReportFilter) {
   const actor = await db.appUser.findUnique({ where: { id: actorId }, select: { active: true, role: true } });
@@ -8,7 +8,7 @@ export async function loadReport(db: PrismaClient, actorId: string, filter: Repo
     where: { deletedAt: null, name: { not: null }, AND: [
       { fields: { path: ["dateEntered"], gte: filter.from } },
       { fields: { path: ["dateEntered"], lte: filter.to } },
-      { OR: ["Pending", "In Progress", "Expedite", "Complete"].map(status => ({ fields: { path: ["status"], equals: status } })) },
+      { OR: reportStatuses(filter.status).map(status => ({ fields: { path: ["status"], equals: status } })) },
     ] }, take: 5001,
     include: { items: { orderBy: { position: "asc" } }, assignments: { include: { user: { select: { displayName: true, email: true } } } } },
   });

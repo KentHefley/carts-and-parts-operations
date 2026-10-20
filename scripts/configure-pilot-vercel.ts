@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { pilotCredentials } from "./pilot-target";
-import { runtimeEnvironment, pilotAllowlist } from "../lib/environment-policy";
+import { runtimeEnvironment, pilotAllowlist, pilotRecipients } from "../lib/environment-policy";
 
 const projectId = "prj_JNid49dzev0RZ6FSKlHrPZxrAeOj";
 const teamId = "team_BILBKtR9HGBoDRxhFt3WJDew";
@@ -32,8 +32,8 @@ async function main() {
   const env = pilotCredentials();
   runtimeEnvironment(env);
   assert.ok(env.RESEND_API_KEY?.startsWith("re_"));
-  assert.equal(pilotAllowlist(env.INVITATION_ALLOWED_RECIPIENTS).length, 3);
-  assert.equal(pilotAllowlist(env.SO_EMAIL_ALLOWED_RECIPIENTS).length, 3);
+  assert.equal(pilotAllowlist(env.INVITATION_ALLOWED_RECIPIENTS).length, pilotRecipients.length);
+  assert.equal(pilotAllowlist(env.SO_EMAIL_ALLOWED_RECIPIENTS).length, pilotRecipients.length);
   const domains = JSON.parse(await vercel(["api", `/v9/projects/${projectId}/domains?teamId=${teamId}`]));
   assert.ok(domains.domains.some((item: { name: string; projectId: string; verified: boolean }) => item.name === domain && item.projectId === projectId && item.verified));
   const path = ".env.pilot.local";

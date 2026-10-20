@@ -45,7 +45,7 @@ async function main() {
       order = await loadOrder(database, order.id);
       assert.equal(order.items[0].unitPrice, stored);
       const record = await database.salesOrder.findUniqueOrThrow({ where: { id: order.id }, include: { items: true, assignments: { include: { user: true } } } });
-      assert.equal(buildReport([record], { kind: "sales", from: order.fields.dateEntered, to: order.fields.dateEntered, query: "" }).subtotal, total);
+      assert.equal(buildReport([record], { kind: "sales", status: "all", from: order.fields.dateEntered, to: order.fields.dateEntered, query: "" }).subtotal, total);
     }
     for (const unitPrice of ["$1,26.00", "126.001", "quoted"]) {
       const invalidPrice = await saveOrder(database, first.id, { id: order.id, base: order.fields, patch: {}, baseItems: order.items, items: order.items.map((item, index) => index === 0 ? { ...item, unitPrice } : item) });

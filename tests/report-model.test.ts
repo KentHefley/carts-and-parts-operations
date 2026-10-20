@@ -4,6 +4,23 @@ import { buildReport, money, reportFilter, type ReportOrder } from "../lib/repor
 const filter = reportFilter({ from: "2026-10-01", to: "2026-10-31", kind: "sales" });
 const item = (description = "CW2 Refill Kit", quantity = "2.5", unitPrice = "12.34") => ({ description, quantity, unitPrice });
 const order = (id: string, fields = {}, items = [item()]): ReportOrder => ({ id, number: Number(id) || 1, name: "Sample Order", deletedAt: null, fields: { status: "In Progress", dateEntered: "2026-10-01", text_13__1: "Sample Customer", text06__1: "10", text0__1: "5", ...fields }, items, assignments: [] });
+
+test("status scope filters all report kinds before totals, never including Voided or Trash", () => {
+  assert.equal(filter.status, "all");
+  const orders = [order("1", { status: "Pending" }), order("2", { status: "In Progress" }), order("3", { status: "Expedite" }), order("4", { status: "Complete" }), order("5", { status: "Voided" }), { ...order("6", { status: "Complete" }), deletedAt: new Date() }];
+  for (const kind of ["sales", "products", "customer"] as const) {
+    const base = { ...filter, kind, query: kind === "products" ? "CW2" : kind === "customer" ? "Customer" : "" };
+    assert.equal(buildReport(orders, { ...base, status: "all" }).rows.length, 4);
+    const open = buildReport(orders, { ...base, status: "open" });
+    const completed = buildReport(orders, { ...base, status: "completed" });
+    assert.deepEqual(open.rows.map(row => row.status).sort(), ["Expedite", "In Progress", "Pending"]);
+    assert.deepEqual(completed.rows.map(row => row.status), ["Complete"]);
+    assert.equal(open.subtotal, "137.55"); assert.equal(completed.subtotal, "45.85");
+    if (kind === "products") { assert.equal(open.quantity, "7.5"); assert.equal(completed.matchingTotal, "30.85"); }
+  }
+  assert.throws(() => reportFilter({ from: filter.from, to: filter.to, status: "voided" }));
+  assert.throws(() => reportFilter({ from: filter.from, to: filter.to, status: ["open", "completed"] }));
+});
 test("inclusive dates, canonical statuses, no Trash/drafts, and customer contains", () => {
   const rows = [order("1"), order("2", { dateEntered: "2026-10-31", status: "Complete" }), order("3", { dateEntered: "2026-11-01" }), order("4", { status: "Voided" }), { ...order("5"), deletedAt: new Date() }, { ...order("6"), name: null }, order("7", { dateEntered: "2026-02-30" }), order("8", { status: "Unknown" })];
   assert.equal(buildReport(rows, filter).rows.length, 2);

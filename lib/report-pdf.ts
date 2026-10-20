@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { money, type buildReport, type ReportFilter } from "./report-model";
+import { reportStatusLabels, reportStatuses, money, type buildReport, type ReportFilter } from "./report-model";
 
 export async function reportPdf(result: ReturnType<typeof buildReport>, filter: ReportFilter) {
   if (result.rows.length > 500 || result.groups.length > 2000) throw new Error("PDF supports up to 500 orders and 2,000 product groups. Narrow the filters, or use Excel/CSV for the full report.");
@@ -35,7 +35,7 @@ export async function reportPdf(result: ReturnType<typeof buildReport>, filter: 
     page.drawImage(logo, { x: (612 - logoWidth) / 2, y: 735 - logoHeight / 2, width: logoWidth, height: logoHeight });
     page.drawText(title, { x: (612 - bold.widthOfTextAtSize(title, 19)) / 2, y: 681, font: bold, size: 19, color: blue });
     y = 656;
-    for (const text of [`Date Entered: ${filter.from} through ${filter.to}, inclusive (America/Chicago)`, ...(filter.query ? [`${filter.kind === "products" ? "Product description (any comma-separated term; spacing ignored)" : "Invoice To"} contains: ${filter.query}`] : []), "Pending, In Progress, Expedite and Complete. Voided and Trash excluded. USD."]) {
+    for (const text of [`Date Entered: ${filter.from} through ${filter.to}, inclusive (America/Chicago)`, ...(filter.query ? [`${filter.kind === "products" ? "Product description (any comma-separated term; spacing ignored)" : "Invoice To"} contains: ${filter.query}`] : []), `${reportStatusLabels[filter.status]}: ${reportStatuses(filter.status).join(", ")}. Voided and Trash excluded. USD.`]) {
       for (const textLine of wrap(text, 516, 8)) { page.drawText(textLine, { x: 48, y, font, size: 8, color: ink }); y -= 11; }
     }
     y -= 15;

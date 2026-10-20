@@ -1,6 +1,6 @@
 export type ApplicationMode = "development" | "pilot";
 type Environment = Record<string, string | undefined>;
-export const pilotRecipients = ["kent@cartsandparts.com", "daryl@cartsandparts.com", "jake@cartsandparts.com"];
+export const pilotRecipients = ["kent@cartsandparts.com", "daryl@cartsandparts.com", "jake@cartsandparts.com", "suziah@cartsandparts.com"];
 const targets = {
   development: { host: "ep-bold-sky-b5e3vwct-pooler.c-7.us-east-2.aws.neon.tech", bucket: "carts-parts-operations-development" },
   pilot: { host: "ep-summer-frog-b5cbla8f-pooler.c-7.us-east-2.aws.neon.tech", bucket: "carts-parts-operations-pilot" },
