@@ -50,3 +50,6 @@ next-env.d.ts
 # Private recovery archives and portable database tools
 /.recovery/
 /.recovery-tools/
+
+# Temporary artifacts
+/tmp/
