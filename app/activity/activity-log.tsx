@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getDatabase } from "../../lib/db";
 import { readActivity } from "../../lib/activity-store";
 import { orderFields } from "../../lib/order-fields";
-import { activityValue, itemHistoryRows } from "../../lib/activity-format";
+import { activityTimestamp, activityValue, itemHistoryRows } from "../../lib/activity-format";
 
 function label(key: string) {
   return orderFields.find(field => field.key === key)?.label ?? ({ name: "Name", dateEntered: "Date Entered", status: "Status", items: "Item rows", assignments: "Assigned To", completedBy: "Completed By", completionDate: "Completion Date", voidedBy: "Voided By", voidedDate: "Voided Date", statusChangedAt: "Status changed at", event: "Event", comment: "Comment", commentAuthor: "Comment Author", mentions: "Mentioned Users" } as Record<string, string>)[key] ?? key;
@@ -21,11 +21,11 @@ export async function ActivityLog({ orderId, cursor, dashboard = false }: { orde
   const { events, names, nextCursor } = await readActivity(getDatabase(), { orderId, cursor });
   const path = orderId ? `/orders/${orderId}/activity` : "/activity";
   return <section aria-label={orderId ? "Sales order activity" : "Dashboard activity"}>
-    <p>Newest first. Times are UTC. Related field edits within one minute are summarized; status and assignment changes remain separate.</p>
+    <p>Newest first. Times are Central (America/Chicago), adjusted automatically for daylight saving time. Related field edits within one minute are summarized; status and assignment changes remain separate.</p>
     {events.length === 0 && <p>No activity to display.</p>}
     <ol className="activity-list">{events.map(event => <li key={event.id}>
       {!orderId && <p><Link href={`/orders/${event.order.id}`}>DEV-{String(event.order.number).padStart(6, "0")} · {event.order.name}</Link></p>}
-      <strong>{event.actor.displayName || event.actor.email}</strong> · <time dateTime={event.createdAt.toISOString()}>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" }).format(event.createdAt)} UTC</time>
+      <strong>{event.actor.displayName || event.actor.email}</strong> · <time dateTime={event.createdAt.toISOString()}>{activityTimestamp(event.createdAt)}</time>
       <dl>{Object.entries(event.changes as Record<string, unknown>).filter(([key]) => key !== "commentId").map(([key, change]) => <div key={key}><dt>{change && typeof change === "object" && "label" in change && typeof change.label === "string" ? change.label : label(key)}</dt><dd>{changeDetails(key, change, names)}</dd></div>)}</dl>
     </li>)}</ol>
     <nav aria-label="Activity pages">{cursor && <Link href={path}>Newest activity</Link>} {nextCursor && <Link href={`${path}?before=${nextCursor}`}>Older activity</Link>} {dashboard && <Link href="/activity">Open dashboard activity</Link>}</nav>

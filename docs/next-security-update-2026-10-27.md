@@ -1,0 +1,16 @@
+# Next.js security update — October 27, 2026
+
+Scope: update Next.js and eslint-config-next from 16.3.8 to 16.4.3, keeping React, Prisma, data models and application behavior unchanged. Branch: codex/next-security-update.
+
+Preservation: existing uncommitted Central-time changes remain in place. A local ignored binary patch and original package/lockfile copies are saved under tmp/. Last pilot deployment before upgrade: dpl_9sy6xGCg2n4XLJEVYV49Mn4kFBWH. No migrations, data resets, invitations or actual email sends are part of this work.
+
+Acceptance: lockfile changes reviewed, installed Next version confirmed, Next critical/high advisories absent from a fresh audit; appropriate unit/integration tests, lint, TypeScript and production build pass; running app and protected preview verified before updating the stable pilot. Do not claim authenticated browser verification unless performed.
+
+Scenarios: authentication/active access and admin restrictions; order save/reopen/conflicts; attachment policy and retention; report exports/totals; Central timestamps; protected routes; sign-in and branding under the new runtime.
+
+Rollback: preserve old deployment while preview is tested. Revert package.json/package-lock.json upgrade and reinstall locked dependencies if necessary. Existing audit/order/file data remains untouched by framework deployment. Older vulnerable code is an emergency temporary fallback, not the final security resolution.
+
+Verification completed: Next.js and eslint-config-next 16.4.3 installed; sharp 0.35.5; React 19.2.8 and Prisma 7.10.0 unchanged. Lockfile diff limited to the Next package family. Fresh audit: zero critical and no Next findings, with five high/one moderate entries remaining outside this update. All 52 TypeScript unit tests passed; lint, TypeScript and local production build passed. Guarded development order, attachment (including synthetic storage checks), report and mocked-email integrations passed and cleaned their fixtures; no real emails sent.
+Local Next dev 16.4.3 serves the Clerk sign-in form without browser errors; signed-out Reports redirects and Next MCP returns zero compilation issues. Vercel staged deployment dpl_4NscYHiynJjwVYPBucQyL1acKsW4 built successfully at https://carts-and-parts-operations-pilot-7vf6woeum-carts-and-parts.vercel.app using pilot configuration without moving the employee-facing stable alias. Protected HTTP checks: sign-in 200 with Pilot/correct Clerk instance; Reports 307 to app sign-in. Stable pilot address inspected and remains on dpl_9sy6xGCg2n4XLJEVYV49Mn4kFBWH. Kent's authenticated development checks are pending; local development intentionally contains different orders from pilot.
+
+Completion: Kent confirmed all signed-in development checks passed (order open/edit/save/reopen, file viewing and Reports). Promoted the already-built deployment dpl_4NscYHiynJjwVYPBucQyL1acKsW4 to the pilot. Stable https://carts-and-parts-operations-pilot.vercel.app resolves to this Ready deployment; sign-in 200 with Pilot and correct Clerk instance, signed-out Reports redirects correctly. Previous deployment dpl_9sy6xGCg2n4XLJEVYV49Mn4kFBWH remains the emergency rollback reference. No database migrations, pilot record changes or real emails. Git commit/push remains with Kent.

@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { activityValue, itemHistoryRows } from "../lib/activity-format";
+import { activityTimestamp, activityValue, itemHistoryRows } from "../lib/activity-format";
+
+test("activity timestamps use Central time with the correct daylight saving offset", () => {
+  assert.equal(activityTimestamp(new Date("2026-10-27T21:12:00Z")), "Oct 27, 2026, 4:12:00 PM CDT");
+  assert.equal(activityTimestamp(new Date("2026-12-27T22:12:00Z")), "Dec 27, 2026, 4:12:00 PM CST");
+  assert.equal(activityTimestamp(new Date("2026-10-28T02:12:00Z")), "Oct 27, 2026, 9:12:00 PM CDT");
+  assert.equal(activityTimestamp(new Date("2026-11-01T06:30:00Z")), "Nov 1, 2026, 1:30:00 AM CDT");
+  assert.equal(activityTimestamp(new Date("2026-11-01T07:30:00Z")), "Nov 1, 2026, 1:30:00 AM CST");
+});
 
 test("historical item edits show only changed values with employee-facing labels", () => {
   const blank = { quantity: "", unitPrice: "", description: "" };
