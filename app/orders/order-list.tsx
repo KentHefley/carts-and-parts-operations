@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { activeStatuses, terminalStatuses } from "../../lib/order-status";
+import { activeStatuses, statusLabel, terminalStatuses } from "../../lib/order-status";
 import type { ListOperation, ListOperationResult } from "../../lib/order-list-operation";
 import { applyOrderListAction } from "./list-actions";
 import { ConfirmationDialog } from "../ui/confirmation-dialog";
@@ -72,7 +72,7 @@ export function OrderList({ orders, completed = false, admin = false }: { orders
     <div className="list-filters">
       <label className="name-filter">Search by Name<input disabled={busy} value={name} onChange={event => { setName(event.target.value); setSelected([]); }} /></label>
       <label>SO Number<input disabled={busy} value={number} onChange={event => { setNumber(event.target.value); setSelected([]); }} /></label>
-      <label>Status<select disabled={busy} value={status} onChange={event => { setStatus(event.target.value); setSelected([]); }}><option value="">{completed ? "All completed statuses" : "All active statuses"}</option>{(completed ? terminalStatuses : activeStatuses).map(value => <option key={value}>{value}</option>)}</select></label>
+      <label>Status<select disabled={busy} value={status} onChange={event => { setStatus(event.target.value); setSelected([]); }}><option value="">{completed ? "All completed statuses" : "All active statuses"}</option>{(completed ? terminalStatuses : activeStatuses).map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}</select></label>
     </div>
     {maySelect && selectedRows.length > 0 && <div className="selection-toolbar" role="region" aria-label="Selected order actions" aria-busy={busy}>
       <strong>{selectedRows.length} selected</strong>
@@ -93,7 +93,7 @@ export function OrderList({ orders, completed = false, admin = false }: { orders
       {maySelect && <th scope="col" className="selection-cell"><input type="checkbox" aria-label="Select all displayed orders" checked={allSelected} disabled={busy || !rows.length} ref={input => { if (input) input.indeterminate = selectedRows.length > 0 && !allSelected; }} onChange={event => setSelected(event.target.checked ? rows.map(order => order.id) : [])} /></th>}
       {["SO Number", "Name", "Status", "Division", "Job Type", "Scheduled Job Date", "Assigned To"].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{rows.map(order => <tr key={order.id} data-selected={selected.includes(order.id) || undefined}>
         {maySelect && <td className="selection-cell"><input type="checkbox" aria-label={`Select ${order.number}`} checked={selected.includes(order.id)} disabled={busy} onChange={event => setSelected(current => event.target.checked ? [...current, order.id] : current.filter(id => id !== order.id))} /></td>}
-        <td><Link href={`/orders/${order.id}`}>{order.number}</Link></td><td><Link href={`/orders/${order.id}`}>{order.name}</Link></td><td><span className={`status-box status-${order.status.replaceAll(" ", "-")}`}>{order.status}</span></td><td>{order.division || "—"}</td><td>{order.jobType || "—"}</td><td>{order.scheduled || "—"}</td><td>{order.assigned || "—"}</td></tr>)}</tbody></table></div>
+        <td><Link href={`/orders/${order.id}`}>{order.number}</Link></td><td><Link href={`/orders/${order.id}`}>{order.name}</Link></td><td><span className={`status-box status-${order.status.replaceAll(" ", "-")}`}>{statusLabel(order.status)}</span></td><td>{order.division || "—"}</td><td>{order.jobType || "—"}</td><td>{order.scheduled || "—"}</td><td>{order.assigned || "—"}</td></tr>)}</tbody></table></div>
     {!rows.length && <p className="empty-message">{completed ? "No completed or voided orders match." : "No saved orders match. Choose New Order to begin."}</p>}
   </>;
 }

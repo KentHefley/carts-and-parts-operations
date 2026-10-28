@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { requireAdmin } from "../../../lib/access";
+import { requireSuperAdmin } from "../../../lib/access";
 import { getDatabase } from "../../../lib/db";
 import { readOrderChoices } from "../../../lib/order-choice-store";
 import { choiceFields } from "../../../lib/order-choice-policy";
 import { AuthenticatedShell } from "../../ui/authenticated-shell";
 import { ChoiceSettings } from "./choice-settings";
 export default async function DropdownChoices() {
-  await requireAdmin();
+  await requireSuperAdmin();
   const db = getDatabase();
   const [rows, history] = await Promise.all([readOrderChoices(db), db.orderChoiceAudit.findMany({ orderBy: { createdAt: "desc" }, take: 50 })]);
   return <AuthenticatedShell title="Dropdown Choices" active="Administration" admin><main className="screen-page">

@@ -1,14 +1,15 @@
+import { statusLabel } from "./order-status";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { reportStatusLabels, reportStatuses, money, type buildReport, type ReportFilter } from "./report-model";
+import { reportStatusLabels, reportStatuses, reportTitles, reportSubtotalLabel, money, type buildReport, type ReportFilter } from "./report-model";
 
 export async function reportPdf(result: ReturnType<typeof buildReport>, filter: ReportFilter) {
   if (result.rows.length > 500 || result.groups.length > 2000) throw new Error("PDF supports up to 500 orders and 2,000 product groups. Narrow the filters, or use Excel/CSV for the full report.");
   const doc = await PDFDocument.create(), font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const logo = await doc.embedPng(await readFile(join(process.cwd(), "public", "branding", "logo.png")));
   const blue = rgb(.086, .357, .675), ink = rgb(.08, .14, .22), pale = rgb(.89, .93, .98), rule = rgb(.77, .84, .94);
-  const supported = new Set(font.getCharacterSet()), title = { sales: "Sales by Date", products: "Products", customer: "Invoice Customer" }[filter.kind];
+  const supported = new Set(font.getCharacterSet()), title = reportTitles[filter.kind];
   const generated = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date());
   const printable = (value: string) => [...value.replace(/\r\n?/g, "\n")].map(char => char === "\n" || supported.has(char.codePointAt(0)!) ? char : `\\u{${char.codePointAt(0)!.toString(16)}}`).join("");
   function wrap(value: string, width: number, size = 9, face: PDFFont = font) {
@@ -35,7 +36,7 @@ export async function reportPdf(result: ReturnType<typeof buildReport>, filter: 
     page.drawImage(logo, { x: (612 - logoWidth) / 2, y: 735 - logoHeight / 2, width: logoWidth, height: logoHeight });
     page.drawText(title, { x: (612 - bold.widthOfTextAtSize(title, 19)) / 2, y: 681, font: bold, size: 19, color: blue });
     y = 656;
-    for (const text of [`Date Entered: ${filter.from} through ${filter.to}, inclusive (America/Chicago)`, ...(filter.query ? [`${filter.kind === "products" ? "Product description (any comma-separated term; spacing ignored)" : "Invoice To"} contains: ${filter.query}`] : []), `${reportStatusLabels[filter.status]}: ${reportStatuses(filter.status).join(", ")}. Voided and Trash excluded. USD.`]) {
+    for (const text of [`Date Entered: ${filter.from} through ${filter.to}, inclusive (America/Chicago)`, ...(filter.query ? [`${filter.kind === "products" ? "Product description (any comma-separated term; spacing ignored)" : filter.kind === "store" ? "Store Name" : "Invoice To"} contains: ${filter.query}`] : []), `${reportStatusLabels[filter.status]}: ${reportStatuses(filter.status).map(statusLabel).join(", ")}. Voided and Trash excluded. USD.`]) {
       for (const textLine of wrap(text, 516, 8)) { page.drawText(textLine, { x: 48, y, font, size: 8, color: ink }); y -= 11; }
     }
     y -= 15;
@@ -84,9 +85,9 @@ export async function reportPdf(result: ReturnType<typeof buildReport>, filter: 
     line(`Full Matching-Order Subtotal: ${money(result.subtotal)}`, true);
     line("Product sales include matching item charges only. Descriptions are grouped ignoring case and extra spaces; no inferred product aliases.");
   } else {
-    table(["SO Number", "Name", "Date Entered", "Status", "Division", "Invoice To", "Order Subtotal"], [58, 105, 58, 60, 65, 100, 70], result.rows.map(row => [row.number, row.name, row.date, row.status, row.division, row.customer, money(row.subtotal)]), [6]);
+    table(["SO Number", "Name", "Date Entered", "Status", "Division", filter.kind === "store" ? "Store Name" : "Invoice To", "Order Subtotal"], [58, 105, 58, 60, 65, 100, 70], result.rows.map(row => [row.number, row.name, row.date, statusLabel(row.status), row.division, filter.kind === "store" ? row.store : row.customer, money(row.subtotal)]), [6]);
     if (y < 160) next();
-    line(`${filter.kind === "customer" ? "Customer Order Subtotal" : "Order Subtotal"}: ${money(result.subtotal)}`, true);
+    line(`${reportSubtotalLabel(filter.kind)}: ${money(result.subtotal)}`, true);
     line(`Matching Orders: ${result.rows.length}`);
   }
   if (!result.rows.length) line("No orders match these filters.");
@@ -99,7 +100,7 @@ export async function reportPdf(result: ReturnType<typeof buildReport>, filter: 
   for (const row of result.rows) {
     if (y < 210) { next(); line("Order Details (continued)", true); }
     line(`${row.number} - ${row.name}`, true);
-    for (const [label, value] of [["Date Entered", row.date], ["Invoice To", row.customer], ["Status", row.status], ["Division", row.division], ["Job Type", row.jobType], ["Scheduled Job Date", row.scheduled], ["Assigned To", row.assigned], ...(filter.kind === "products" ? [["Matching Product Total", money(row.matching)]] : []), ["Order Subtotal", money(row.subtotal)], ["Review", row.issues.join("; ")]]) line(`${label}: ${value || "—"}`);
+    for (const [label, value] of [["Date Entered", row.date], ["Invoice To", row.customer], ...(filter.kind === "store" ? [["Store Name", row.store]] : []), ["Status", statusLabel(row.status)], ["Division", row.division], ["Job Type", row.jobType], ["Scheduled Job Date", row.scheduled], ["Assigned To", row.assigned], ...(filter.kind === "products" ? [["Matching Product Total", money(row.matching)]] : []), ["Order Subtotal", money(row.subtotal)], ["Review", row.issues.join("; ")]]) line(`${label}: ${value || "—"}`);
     y -= 12;
   }
   doc.getPages().forEach((sheet, index) => {

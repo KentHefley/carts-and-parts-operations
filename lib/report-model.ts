@@ -1,8 +1,11 @@
 import { Prisma } from "../generated/prisma/client";
 import { DateTime } from "luxon";
+import { normalizeSavedName } from "./saved-name-model";
 
 export type ReportStatus = "all" | "open" | "completed";
-export type ReportFilter = { kind: "sales" | "products" | "customer"; from: string; to: string; query: string; status: ReportStatus };
+export type ReportFilter = { kind: "sales" | "products" | "customer" | "store"; from: string; to: string; query: string; status: ReportStatus };
+export const reportTitles = { sales: "Sales by Date", products: "Products", customer: "Invoice Customer", store: "Store Name" };
+export const reportSubtotalLabel = (kind: ReportFilter["kind"]) => kind === "products" ? "Full Matching-Order Subtotal" : kind === "customer" ? "Customer Order Subtotal" : kind === "store" ? "Store Order Subtotal" : "Order Subtotal";
 export const reportStatusLabels = { all: "All Orders", open: "Open Orders", completed: "Completed Orders" };
 export function reportStatuses(status: ReportStatus) {
   if (status === "open") return ["Pending", "In Progress", "Expedite"];
@@ -21,11 +24,12 @@ export function reportFilter(input: Record<string, string | string[] | undefined
   const kind = one("kind") || "sales", from = one("from"), to = one("to"), query = one("query").trim();
   const status = one("status") || "all";
   if (!["all", "open", "completed"].includes(status)) throw new Error("Choose All, Open or Completed orders.");
-  if (!["sales", "products", "customer"].includes(kind)) throw new Error("Choose a report type.");
+  if (!["sales", "products", "customer", "store"].includes(kind)) throw new Error("Choose a report type.");
   if (![from, to].every(validDate) || from > to) throw new Error("Choose a valid Date Entered range with the start on or before the end.");
   if (query.length > 200) throw new Error("Use a search of 200 characters or fewer.");
-  if (kind !== "sales" && !query) throw new Error(kind === "products" ? "Enter a product number or description to search." : "Enter an Invoice To customer name to search.");
+  if (kind !== "sales" && !query) throw new Error(kind === "products" ? "Enter a product number or description to search." : kind === "store" ? "Enter a Store Name to search." : "Enter an Invoice To customer name to search.");
   if (kind === "products" && !productTerms(query).length) throw new Error("Enter at least one product search term, separated by commas.");
+  if ((kind === "customer" || kind === "store") && !normalizeSavedName(query)) throw new Error("Enter a customer or store name, not only apostrophes.");
   return { kind: kind as ReportFilter["kind"], from, to, query: kind === "sales" ? "" : query, status: status as ReportStatus };
 }
 function validDate(value: string) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && DateTime.fromISO(value).isValid && DateTime.fromISO(value).toISODate() === value; }
@@ -44,12 +48,13 @@ export function buildReport(orders: ReportOrder[], filter: ReportFilter) {
   const statuses = reportStatuses(filter.status);
   const terms = productTerms(filter.query);
   const groups = new Map<string, { description: string; quantity: Prisma.Decimal; total: Prisma.Decimal; orders: Set<string>; invalid: boolean }>();
-  const rows: { id: string; number: string; name: string; date: string; customer: string; status: string; division: string; jobType: string; scheduled: string; assigned: string; subtotal: string | null; matching: string | null; issues: string[] }[] = [];
+  const rows: { id: string; number: string; name: string; date: string; customer: string; store: string; status: string; division: string; jobType: string; scheduled: string; assigned: string; subtotal: string | null; matching: string | null; issues: string[] }[] = [];
   let subtotal = new D(0), matchingTotal = new D(0), quantityTotal = new D(0), invalidOrders = 0, invalidProducts = false;
   for (const order of orders) {
     const fields = (order.fields ?? {}) as Record<string, string>;
     if (order.deletedAt || !order.name?.trim() || !statuses.includes(fields.status) || !validDate(fields.dateEntered ?? "") || fields.dateEntered < filter.from || fields.dateEntered > filter.to) continue;
-    if (filter.kind === "customer" && !normal(fields.text_13__1 ?? "").includes(normal(filter.query))) continue;
+    if (filter.kind === "customer" && !normalizeSavedName(fields.text_13__1 ?? "").includes(normalizeSavedName(filter.query))) continue;
+    if (filter.kind === "store" && !normalizeSavedName(fields.text_21__1 ?? "").includes(normalizeSavedName(filter.query))) continue;
     const matching = order.items.filter(item => terms.some(term => normal(item.description).replace(/\s/g, "").includes(term)));
     if (filter.kind === "products" && !matching.length) continue;
     const issues: string[] = [];
@@ -71,7 +76,7 @@ export function buildReport(orders: ReportOrder[], filter: ReportFilter) {
     }
     if (issues.length) invalidOrders++; else subtotal = subtotal.plus(orderSum);
     matchingTotal = matchingTotal.plus(itemSum);
-    rows.push({ id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, name: order.name, date: fields.dateEntered, customer: fields.text_13__1 || "", status: fields.status, division: fields.division__1 || "", jobType: fields.dropdown__1 || "", scheduled: fields.start_job_date__1 || "", assigned: order.assignments.map(a => a.user.displayName || a.user.email).join(", "), subtotal: issues.length ? null : orderSum.toFixed(2), matching: invalidMatching ? null : itemSum.toFixed(2), issues });
+    rows.push({ id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, name: order.name, date: fields.dateEntered, customer: fields.text_13__1 || "", store: fields.text_21__1 || "", status: fields.status, division: fields.division__1 || "", jobType: fields.dropdown__1 || "", scheduled: fields.start_job_date__1 || "", assigned: order.assignments.map(a => a.user.displayName || a.user.email).join(", "), subtotal: issues.length ? null : orderSum.toFixed(2), matching: invalidMatching ? null : itemSum.toFixed(2), issues });
   }
   rows.sort((a, b) => b.date.localeCompare(a.date) || b.number.localeCompare(a.number));
   return { rows, subtotal: invalidOrders ? null : subtotal.toFixed(2), matchingTotal: invalidProducts ? null : matchingTotal.toFixed(2), quantity: quantityTotal.toString(), invalidOrders, groups: [...groups.values()].map(group => ({ description: group.description, quantity: group.quantity.toString(), total: group.invalid ? null : group.total.toFixed(2), orders: group.orders.size })).sort((a, b) => a.description.localeCompare(b.description)) };

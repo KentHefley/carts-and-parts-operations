@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isSuperAdminAccount } from "./super-admin-policy";
 import { Prisma, PrismaClient } from "../generated/prisma/client";
 import { customKey, customTypes, defaultLayout, employeeIds, formSections, includeHoursWorked, type FieldLayout, type LayoutField } from "./custom-field-model";
 
@@ -11,7 +12,7 @@ export async function readFieldLayout(db: PrismaClient | Tx): Promise<FieldLayou
 }
 async function administrator(tx: Tx, actorId: string) {
   const actor = await tx.appUser.findUnique({ where: { id: actorId } });
-  if (!actor?.active || actor.role !== "ADMIN" || actor.loginDeletionRequestedAt || actor.loginDeletedAt) throw new FieldSettingsError("Administrator access required.");
+  if (!actor?.active || actor.role !== "ADMIN" || actor.loginDeletionRequestedAt || actor.loginDeletedAt || !isSuperAdminAccount(actor.email)) throw new FieldSettingsError("Super Administrator access required.");
   return actor.displayName || actor.email;
 }
 export async function writeLayout(tx: Tx, layout: FieldLayout) {

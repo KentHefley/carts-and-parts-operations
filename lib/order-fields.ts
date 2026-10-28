@@ -90,9 +90,8 @@ export const orderFields: FieldDefinition[] = [
     "options": [
       "CPU",
       "FOB Delivered",
-      "Freight Collect",
-      "Prepaid + Add",
-      "NA"
+      "In-House Delivery",
+      "Prepaid + Add"
     ]
   },
   {

@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import FullCalendar, { type DatesSetInfo, type EventClickInfo, type EventDisplayInfo } from "@fullcalendar/react";
+import FullCalendar, { type DatesSetInfo, type EventClickInfo, type EventDisplayInfo, type DayCellInfo } from "@fullcalendar/react";
 import themePlugin from "@fullcalendar/react/themes/monarch";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
 import "@fullcalendar/react/skeleton.css";
@@ -11,13 +11,15 @@ import { useRouter } from "next/navigation";
 import { expandEntries, textColor, type CalendarKind, type Entry, type Person, type Category, type EventDetails, type Occurrence } from "../../lib/calendar-model";
 import { saveEvent, saveSetting, addPerson, previewPersonDeletion, removePerson } from "./actions";
 import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { blackoutsOnDate, type CalendarBlackout } from "../../lib/calendar-blackout-model";
+import { BlackoutNotices, BlackoutSettings } from "./calendar-blackouts";
 const plugins = [themePlugin, dayGridPlugin];
 const toolbar = { start: "prev,next today", center: "title", end: "dayGridMonth,dayGridWeek,dayGridDay" };
 const views = { dayGridMonth: { dayMaxEvents: 3 }, dayGridWeek: { dayMaxEvents: 3 }, dayGridDay: { dayMaxEvents: false } };
 const zoneOptions = ["America/Chicago", "America/Denver", "America/Phoenix", "America/New_York", "America/Los_Angeles"];
 const today = () => DateTime.now().setZone("America/Chicago").toISODate()!;
 
-export function CalendarScreen({ kind, admin, entries, people, categories }: { kind: CalendarKind; admin: boolean; entries: Entry[]; people: Person[]; categories: Category[] }) {
+export function CalendarScreen({ kind, admin, entries, people, categories, superAdmin = false, blackouts = [] }: { kind: CalendarKind; admin: boolean; entries: Entry[]; people: Person[]; categories: Category[]; superAdmin?: boolean; blackouts?: CalendarBlackout[] }) {
   const [range, setRange] = useState({ from: DateTime.now().startOf("month").minus({ days: 7 }).toISODate()!, to: DateTime.now().endOf("month").plus({ days: 8 }).toISODate()! });
   const [selectedPeople, setFilter] = useState<string[]>([]);
   const filter = useMemo(() => selectedPeople.filter(id => people.some(person => person.id === id)), [selectedPeople, people]);
@@ -57,15 +59,23 @@ export function CalendarScreen({ kind, admin, entries, people, categories }: { k
     return <span className="calendar-event-title" title={`${title}${event.allDay ? " · All day" : ` · ${DateTime.fromISO(event.start).setZone(event.details.zone).toFormat("MMM d, h:mm a")} ${event.details.zone}`}`}>{title}</span>;
   }, [people, categories, kind]);
   const events = useMemo(() => occurrences.map(event => ({ ...event, color: event.backgroundColor, contrastColor: event.textColor, display: "block", extendedProps: { occurrence: event } })), [occurrences]);
+  const dayBlackouts = useCallback((info: DayCellInfo) => kind === "employee" ? blackoutsOnDate(blackouts, info.date.toISOString().slice(0, 10)) : [], [kind, blackouts]);
+  const dayCellClass = useCallback((info: DayCellInfo) => dayBlackouts(info).length ? "calendar-blackout-day" : "", [dayBlackouts]);
+  const dayCellTopContent = useCallback((info: DayCellInfo) => {
+    const notices = dayBlackouts(info);
+    return <><span>{info.dayNumberText}</span>{notices.length > 0 && <span className="calendar-blackout-label" title={notices.map(row => row.reason).join("; ")}>Vacation Blackout</span>}</>;
+  }, [dayBlackouts]);
   const title = kind === "management" ? "Calendar" : "Time Off/Birthday Calendar";
   return <main className="screen-page calendar-screen"><div className="screen-heading"><div><h1>{title}</h1><p className="screen-caption">Manually maintained schedules · Sunday starts the week</p></div>{admin && <button className="primary-button" onClick={() => setSelected("new")}>Add Event</button>}</div>
     <div className="calendar-filters"><details ref={peopleDropdown}><summary>People {filter.length ? `(${filter.length} selected)` : "— All People"}</summary><fieldset><legend>Show events for any selected person</legend>{people.map(person => <label key={person.id}><input type="checkbox" checked={filter.includes(person.id)} onChange={event => setFilter(previous => event.target.checked ? [...previous, person.id] : previous.filter(id => id !== person.id))} />{person.name}{!person.active ? " (inactive)" : ""}</label>)}</fieldset></details><div className="calendar-selected-people" aria-label="Selected people">{people.filter(person => filter.includes(person.id)).map(person => <span className="calendar-person-chip" key={person.id}>{person.name}<button type="button" aria-label={`Remove ${person.name} from filters`} onClick={() => setFilter(previous => previous.filter(id => id !== person.id))}>×</button></span>)}</div><button onClick={() => setFilter([])}>Clear Filters</button><label className="calendar-grid-zone">Grid time zone<select value={zone} onChange={event => setZone(event.target.value)}>{zoneOptions.map(value => <option key={value}>{value}</option>)}</select></label></div>
     <p className="screen-caption">Timed bars use the grid time zone. Open an event for its location’s local time and full details. All-day dates stay unchanged.</p>
     <div className="calendar-legend" aria-label={kind === "management" ? "Person colors" : "Category colors"}>{(kind === "management" ? people : categories).filter(item => item.active && (kind === "employee" || occurrences.some(event => event.details.people.includes(item.id)))).map(item => <span key={item.id} style={{ background: item.color, color: textColor(item.color) }}>{item.name}</span>)}{kind === "management" && occurrences.some(event => !event.details.people.length) && <span style={{ background: "#596575", color: "white" }}>No person</span>}</div>
-    <div className="calendar-grid"><FullCalendar plugins={plugins} initialView="dayGridMonth" firstDay={0} headerToolbar={toolbar} views={views} timeZone={zone} events={events} eventClick={eventClick} eventContent={render} datesSet={datesSet} moreLinkClick="day" displayEventTime={false} eventInteractive editable={false} height="auto" /></div>
+    {kind === "employee" && <BlackoutNotices rows={blackouts} from={range.from} to={range.to} />}
+    <div className="calendar-grid"><FullCalendar plugins={plugins} initialView="dayGridMonth" firstDay={0} headerToolbar={toolbar} views={views} timeZone={zone} events={events} eventClick={eventClick} eventContent={render} datesSet={datesSet} dayCellClass={dayCellClass} dayCellTopContent={kind === "employee" ? dayCellTopContent : undefined} moreLinkClick="day" displayEventTime={false} eventInteractive editable={false} height="auto" /></div>
     {!occurrences.length && <p role="status">No events in this date range for the selected people.</p>}
     {admin && <details className="calendar-settings"><summary>Calendar Settings</summary>
       <div className="calendar-settings-sections">
+        {kind === "employee" && superAdmin && <BlackoutSettings rows={blackouts} />}
         <section aria-labelledby="calendar-people-heading">
           <header><h2 id="calendar-people-heading">People</h2><button onClick={() => setSetting({ type: "person" })}>Add Person</button></header>
           <p className="screen-caption">Manage names, calendar colors and active status. People can be listed without a login account.</p>

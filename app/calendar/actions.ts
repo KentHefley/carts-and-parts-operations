@@ -3,6 +3,18 @@ import { requireAdmin } from "../../lib/access";
 import { getDatabase } from "../../lib/db";
 import { saveCalendarEntry, saveCalendarSetting, selectOrAddCalendarPerson, calendarPersonDeletionPreview, deleteCalendarPerson } from "../../lib/calendar-store";
 import { revalidatePath } from "next/cache";
+import { changeCalendarBlackout, type BlackoutChange } from "../../lib/calendar-blackout-store";
+import { BlackoutError } from "../../lib/calendar-blackout-model";
+export async function saveBlackout(input: BlackoutChange) {
+  const actor = await requireAdmin();
+  try {
+    await changeCalendarBlackout(getDatabase(), actor.id, input);
+    revalidatePath("/employee-calendar");
+    return { ok: true as const };
+  } catch (error) {
+    return { ok: false as const, message: error instanceof BlackoutError ? error.message : "Could not save this blackout. Your input is preserved; retry later." };
+  }
+}
 export async function previewPersonDeletion(id: string) {
   const actor = await requireAdmin();
   try { return { ok: true as const, preview: await calendarPersonDeletionPreview(getDatabase(), actor.id, id) }; }

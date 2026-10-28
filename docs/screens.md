@@ -167,3 +167,19 @@ October 17 Unit Price correction: Kent approved retaining decimal storage for re
 October 20 report status filter: Order Status appears after Report with All Orders (default), Open Orders and Completed Orders. Selection is retained in the URL, pagination and every download. Results/export metadata state the chosen scope; Voided and Trash remain excluded. Existing dates, searches, columns and calculation definitions remain unchanged.
 
 October 27 activity log correction supersedes explicit UTC display: both All Activity and individual-order Activity Log show Central time (America/Chicago), including CST/CDT abbreviation and seconds. Underlying audit timestamps remain unchanged.
+
+October 28 Terms dropdown: empty is board blue with dash; any selected Terms value is soft yellow/navy in light and dark themes. Native option menu keeps normal theme colors; other dropdowns are unchanged.
+
+October 28 status label: use Pending Credit (Kent's shorter wording) wherever order status is displayed. The status picker keeps its blue Pending color and allows wrapping on narrow screens. Existing saved Pending values and filter values stay unchanged.
+
+October 28 Freight-Shipping dropdown active choices display alphabetically: CPU, FOB Delivered, In-House Delivery, Prepaid + Add (plus any other retained active admin-added choices sorted by name). Existing unavailable saved values remain visible but cannot be newly selected.
+
+October 28 Reports: fourth option Store Name reveals Store Name contains input. Results add Store Name alongside Invoice To and label the total Store Order Subtotal. Excel/CSV retain both fields; PDF summary uses the Store Name column and full order details retain Invoice To and Store Name. Search/date/status remain in URLs and downloads.
+
+October 28 Employee calendar: Vacation Blackout notice panel above the grid lists visible ranges and reasons; covered days have rose shading and labels. Calendar Settings contains Vacation Blackouts/Add Blackout Dates for Super Admin only, opening a date/reason editor with in-app deletion confirmation. Other admins retain normal calendar controls; users can view notices.
+
+October 28 Administration: show the bottom Dropdown Choices and Add Sales Order Field cards only to Super Admin. Protect direct settings URLs and Server Actions; approved ordinary admins opening those URLs return to Administration.
+
+October 28 Invoice To and Store Name: optional keyboard-accessible saved-name suggestions appear while typing at least two characters. Choose with arrows/Enter or click; Escape/click-away closes. Lists are separate by field, ranked by saved frequency and limited to ten names. Manual entry works without suggestions. Report customer/store filters explain apostrophe matching and lack of spelling inference.
+
+October 28 Description of Service and each item Description reuse the saved-text suggestion control with personal-history helper text. Start after two characters; choose with arrows/Enter or click, dismiss with Escape/click-away. Item selection updates only that row's description. No automatic completion or price/quantity changes.

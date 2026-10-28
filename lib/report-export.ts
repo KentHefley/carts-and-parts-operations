@@ -1,17 +1,18 @@
+import { statusLabel } from "./order-status";
 import ExcelJS from "exceljs";
-import { reportStatusLabels, reportStatuses, type buildReport, type ReportFilter } from "./report-model";
+import { reportStatusLabels, reportStatuses, reportTitles, reportSubtotalLabel, type buildReport, type ReportFilter } from "./report-model";
 type Result = ReturnType<typeof buildReport>;
 type Cell = string | number;
 export const safeSpreadsheetText = (value: string) => /^[\s\u0000-\u001f]*[=+@-]/.test(value) ? `'${value}` : value;
 const numeric = (value: string | null): Cell => value === null ? "Needs review" : value.replace(/[-.]/g, "").replace(/^0+/, "").length <= 15 ? Number(value) : value;
 export function exportTables(result: Result, filter: ReportFilter, generated = new Date()) {
   const summary: Cell[][] = [
-    ["Report", { sales: "Sales by Date", products: "Products", customer: "Invoice Customer" }[filter.kind]],
-    ["Date basis", "Date Entered, inclusive; America/Chicago"], ["From", filter.from], ["Through", filter.to], [filter.kind === "products" ? "Search terms (match any)" : "Search contains", filter.query || "All"],
+    ["Report", reportTitles[filter.kind]],
+    ["Date basis", "Date Entered, inclusive; America/Chicago"], ["From", filter.from], ["Through", filter.to], [filter.kind === "products" ? "Search terms (match any)" : filter.kind === "store" ? "Store Name contains" : "Search contains", filter.query || "All"],
     ["Generated (CT)", new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(generated)],
-    ["Order Status", reportStatusLabels[filter.status]], ["Statuses", `${reportStatuses(filter.status).join(", ")}; Voided and Trash excluded`], ["Matching Orders", result.rows.length],
+    ["Order Status", reportStatusLabels[filter.status]], ["Statuses", `${reportStatuses(filter.status).map(statusLabel).join(", ")}; Voided and Trash excluded`], ["Matching Orders", result.rows.length],
     ...(filter.kind === "products" ? [["Matching Quantity", numeric(result.quantity)], ["Matching Product Total", numeric(result.matchingTotal)]] : []),
-    [filter.kind === "products" ? "Full Matching-Order Subtotal" : filter.kind === "customer" ? "Customer Order Subtotal" : "Order Subtotal", numeric(result.subtotal)],
+    [reportSubtotalLabel(filter.kind), numeric(result.subtotal)],
     ["Calculation", "Item quantity x unit price + Labor Price + Travel Price. Round each charge to cents, half-up, then sum. Blank optional amounts = zero."],
     ["Exclusions", "Freight, NTE, AM and specialized price fields are excluded pending clarification. Saved order values are not confirmed invoices or payments."],
     ["Product grouping", "Full description ignoring case and extra spaces; no inferred aliases. Each matching order counted once in order subtotals."],
@@ -20,7 +21,7 @@ export function exportTables(result: Result, filter: ReportFilter, generated = n
     ["Precision", "Amounts/quantities exceeding Excel's 15-digit precision are exported as exact text. No spreadsheet formulas are generated."],
   ];
   const products: Cell[][] = [["Product Description", "Quantity", "Matching Product Sales", "Orders"], ...result.groups.map(group => [group.description, numeric(group.quantity), numeric(group.total), group.orders])];
-  const orders: Cell[][] = [["SO Number", "Name", "Date Entered", "Invoice To", "Status", "Division", "Job Type", "Scheduled Job Date", "Assigned To", ...(filter.kind === "products" ? ["Matching Product Total"] : []), "Order Subtotal", "Review"], ...result.rows.map(row => [row.number, row.name, row.date, row.customer, row.status, row.division, row.jobType, row.scheduled, row.assigned, ...(filter.kind === "products" ? [numeric(row.matching)] : []), numeric(row.subtotal), row.issues.join("; ")])];
+  const orders: Cell[][] = [["SO Number", "Name", "Date Entered", "Invoice To", ...(filter.kind === "store" ? ["Store Name"] : []), "Status", "Division", "Job Type", "Scheduled Job Date", "Assigned To", ...(filter.kind === "products" ? ["Matching Product Total"] : []), "Order Subtotal", "Review"], ...result.rows.map(row => [row.number, row.name, row.date, row.customer, ...(filter.kind === "store" ? [row.store] : []), statusLabel(row.status), row.division, row.jobType, row.scheduled, row.assigned, ...(filter.kind === "products" ? [numeric(row.matching)] : []), numeric(row.subtotal), row.issues.join("; ")])];
   return { summary, products, orders };
 }
 export function reportCsv(result: Result, filter: ReportFilter) {

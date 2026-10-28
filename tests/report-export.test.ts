@@ -9,6 +9,38 @@ const filter = reportFilter({ kind: "products", from: "2026-10-01", to: "2026-10
 const order: ReportOrder = { id: "synthetic", number: 1, name: '=HYPERLINK("evil")', deletedAt: null, fields: { status: "Complete", dateEntered: "2026-10-01", text_13__1: "Customer, Inc.\nSecond line", text06__1: "10", text0__1: "5" }, items: [{ description: "+CW2 refill kit", quantity: "2.5", unitPrice: "12.34" }], assignments: [] };
 const result = buildReport([order], filter);
 
+test("Store Name downloads include store details, Invoice To, filters and subtotal", async () => {
+  const scoped = reportFilter({ ...filter, kind: "store", query: "Store, East", status: "completed" });
+  const results = buildReport([{ ...order, fields: { ...(order.fields as Record<string, string>), text_21__1: "=Store, East" } }], scoped);
+  const tables = exportTables(results, scoped);
+  assert.deepEqual(tables.summary.find(row => row[0] === "Report"), ["Report", "Store Name"]);
+  assert.deepEqual(tables.summary.find(row => row[0] === "Store Name contains"), ["Store Name contains", "Store, East"]);
+  assert.deepEqual(tables.summary.find(row => row[0] === "Store Order Subtotal"), ["Store Order Subtotal", 45.85]);
+  assert.equal(tables.orders[0][4], "Store Name");
+  const csv = reportCsv(results, scoped);
+  assert.match(csv, /'=Store, East/);
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(await reportExcel(results, scoped) as never);
+  assert.equal(book.getWorksheet("Orders")!.getCell("E2").value, "'=Store, East");
+  assert.equal(book.getWorksheet("Orders")!.getCell("D2").value, "Customer, Inc.\nSecond line");
+  assert.ok((await PDFDocument.load(await reportPdf(results, scoped))).getPageCount() >= 2);
+});
+
+test("Pending Credit exports retain canonical Pending eligibility and values", async () => {
+  const pending = { ...order, fields: { ...(order.fields as Record<string, string>), status: "Pending" } };
+  const scoped = { ...filter, status: "open" as const };
+  const results = buildReport([pending], scoped);
+  assert.equal(results.rows.length, 1);
+  assert.equal(results.rows[0].status, "Pending");
+  assert.equal(exportTables(results, scoped).orders[1][4], "Pending Credit");
+  assert.match(reportCsv(results, scoped), /Pending Credit/);
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(await reportExcel(results, scoped) as never);
+  assert.equal(book.getWorksheet("Orders")!.getCell("E2").value, "Pending Credit");
+  assert.equal((pending.fields as Record<string, string>).status, "Pending");
+  assert.equal(buildReport([pending], { ...scoped, status: "completed" }).rows.length, 0);
+});
+
 test("status-filtered downloads contain the chosen scope and only its matching rows", async () => {
   const orders = [{ ...order, number: 1 }, { ...order, id: "open", number: 2, fields: { ...(order.fields as Record<string, string>), status: "Expedite" } }];
   for (const [status, label, expected, excluded] of [["open", "Open Orders", "DEV-000002", "DEV-000001"], ["completed", "Completed Orders", "DEV-000001", "DEV-000002"]] as const) {

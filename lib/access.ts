@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getDatabase } from "./db";
 import { approvedAccess } from "./access-policy";
 import { acceptEmployeeInvitation } from "./invitation-store";
+import { isSuperAdminAccount } from "./super-admin-policy";
 
 // Shared resolution lets the denial screen distinguish an unapproved account
 // from an approved employee who opened an administrator-only route.
@@ -38,5 +39,17 @@ export async function requireApprovedUser() {
 export async function requireAdmin() {
   const user = await requireApprovedUser();
   if (user.role !== "ADMIN") redirect("/access-denied?reason=admin");
+  return user;
+}
+
+export async function approvedSuperAdmin(user: { id: string; role: string }) {
+  if (user.role !== "ADMIN") return false;
+  const account = await getDatabase().appUser.findUnique({ where: { id: user.id } });
+  return !!account?.active && account.role === "ADMIN" && !account.loginDeletionRequestedAt && !account.loginDeletedAt && isSuperAdminAccount(account.email);
+}
+
+export async function requireSuperAdmin() {
+  const user = await requireAdmin();
+  if (!await approvedSuperAdmin(user)) redirect("/administration");
   return user;
 }

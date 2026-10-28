@@ -5,6 +5,36 @@ const filter = reportFilter({ from: "2026-10-01", to: "2026-10-31", kind: "sales
 const item = (description = "CW2 Refill Kit", quantity = "2.5", unitPrice = "12.34") => ({ description, quantity, unitPrice });
 const order = (id: string, fields = {}, items = [item()]): ReportOrder => ({ id, number: Number(id) || 1, name: "Sample Order", deletedAt: null, fields: { status: "In Progress", dateEntered: "2026-10-01", text_13__1: "Sample Customer", text06__1: "10", text0__1: "5", ...fields }, items, assignments: [] });
 
+test("customer/store matching ignores apostrophes but never guesses spelling or changes saved labels", () => {
+  const spellings = ["Albertsons", "Albertson's", "Albertson’s", "ALBERTSON‘S", "Albertsonʼs", "Albertson＇s", "Albejttsons"];
+  const rows = spellings.map((name, index) => order(String(index + 1), { text_13__1: name, text_21__1: name }));
+  for (const kind of ["customer", "store"] as const) {
+    for (const query of ["Albertsons", "Albertson's", "ALBERTSON’S"]) {
+      const result = buildReport(rows, reportFilter({ ...filter, kind, query }));
+      assert.equal(result.rows.length, 6); assert.equal(result.subtotal, "275.10");
+      assert.ok(result.rows.some(row => row.customer === "Albertson’s" && row.store === "Albertson’s"));
+    }
+    assert.throws(() => reportFilter({ ...filter, kind, query: " ' ’ ‘ ʼ ＇ " }), /apostrophes/);
+  }
+  const products = [order("1", {}, [item("Albertson's part")])];
+  assert.equal(buildReport(products, { ...filter, kind: "products", query: "Albertsons" }).rows.length, 0);
+});
+
+test("Store Name searches saved store values independently of Invoice To", () => {
+  const scoped = reportFilter({ kind: "store", from: filter.from, to: filter.to, query: "  COSTCO   Gilbert  " });
+  const rows = [order("1", { text_21__1: "Costco Gilbert #123", status: "Pending" }), order("2", { text_21__1: "COSTCO   GILBERT", status: "Complete", dateEntered: "2026-10-31" }), order("3", { text_13__1: "Costco Gilbert", text_21__1: "Other Store" }), order("4", { text_21__1: "Costco Gilbert", status: "Voided" }), { ...order("5", { text_21__1: "Costco Gilbert" }), deletedAt: new Date() }, order("6", { text_21__1: "Costco Gilbert", dateEntered: "2026-11-01" })];
+  const result = buildReport(rows, scoped);
+  assert.equal(result.rows.length, 2);
+  assert.equal(result.subtotal, "91.70");
+  assert.equal(result.rows[0].store, "COSTCO   GILBERT");
+  assert.equal(result.rows[0].customer, "Sample Customer");
+  assert.equal(buildReport(rows, { ...scoped, status: "open" }).subtotal, "45.85");
+  assert.equal(buildReport(rows, { ...scoped, status: "completed" }).subtotal, "45.85");
+  assert.equal(buildReport([order("7", { text_21__1: "Store, East" })], { ...scoped, query: "Store, East" }).rows.length, 1);
+  assert.equal(buildReport([order("7", { text_21__1: "Store East" })], { ...scoped, query: "Store, East" }).rows.length, 0);
+  assert.throws(() => reportFilter({ kind: "store", from: filter.from, to: filter.to, query: " " }), /Store Name/);
+});
+
 test("status scope filters all report kinds before totals, never including Voided or Trash", () => {
   assert.equal(filter.status, "all");
   const orders = [order("1", { status: "Pending" }), order("2", { status: "In Progress" }), order("3", { status: "Expedite" }), order("4", { status: "Complete" }), order("5", { status: "Voided" }), { ...order("6", { status: "Complete" }), deletedAt: new Date() }];

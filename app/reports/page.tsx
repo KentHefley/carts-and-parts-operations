@@ -19,8 +19,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   }
   const page = /^\d{1,6}$/.test(value("page")) ? Math.max(1, Number(value("page"))) : 1;
   return <AuthenticatedShell title="Reports" active="Reports" admin><main className="screen-page reports-screen"><div className="screen-heading"><div><h1>Reports</h1><p className="screen-caption">Saved sales order values · Administrator access</p></div></div>
-    <ReportFilters key={JSON.stringify([params.kind, params.from, params.to, params.query, params.status])} kind={["sales", "products", "customer"].includes(value("kind")) ? value("kind") : "sales"} from={value("from", `${today.slice(0, 7)}-01`)} to={value("to", today)} query={value("query")} status={["all", "open", "completed"].includes(value("status")) ? value("status") : "all"} />
+    <ReportFilters key={JSON.stringify([params.kind, params.from, params.to, params.query, params.status])} kind={["sales", "products", "customer", "store"].includes(value("kind")) ? value("kind") : "sales"} from={value("from", `${today.slice(0, 7)}-01`)} to={value("to", today)} query={value("query")} status={["all", "open", "completed"].includes(value("status")) ? value("status") : "all"} />
     {error && <p role="alert" className="report-warning">{error}</p>}
-    {result && filter ? <ReportResults result={result} filter={filter} page={page} /> : !error && <p>Choose a report and Date Entered range, then select Run Report. Product and customer searches use case-insensitive contains matching.</p>}
+    {result && filter ? <ReportResults result={result} filter={filter} page={page} /> : !error && <p>Choose a report and Date Entered range, then select Run Report. Product, customer and store searches use case-insensitive contains matching.</p>}
   </main></AuthenticatedShell>;
 }

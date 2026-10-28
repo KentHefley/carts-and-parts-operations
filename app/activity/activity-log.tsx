@@ -1,3 +1,4 @@
+import { statusLabel } from "../../lib/order-status";
 import Link from "next/link";
 import { getDatabase } from "../../lib/db";
 import { readActivity } from "../../lib/activity-store";
@@ -10,7 +11,7 @@ function label(key: string) {
 function changeDetails(key: string, change: unknown, names: Map<string, string>) {
   if (change && typeof change === "object" && "before" in change && "after" in change) {
     if (key === "items") return <div className="table-scroll"><table><thead><tr><th>Item</th><th>Field</th><th>Previous value</th><th>New value</th></tr></thead><tbody>{itemHistoryRows(change.before, change.after).map(row => <tr key={`${row.item}-${row.field}`}><td>Item {row.item}</td><td>{row.field}</td><td>{activityValue(row.before, names)}</td><td>{activityValue(row.after, names)}</td></tr>)}</tbody></table></div>;
-    const formatted = (value: unknown) => { if ("type" in change && change.type === "employees" && typeof value === "string" && value) { try { return activityValue(JSON.parse(value), names); } catch {} } if ("type" in change && change.type === "checkbox") return value === "true" ? "Yes" : value === "false" ? "No" : "—"; return activityValue(value, names); };
+    const formatted = (value: unknown) => { if (key === "status" && typeof value === "string") return activityValue(statusLabel(value), names); if ("type" in change && change.type === "employees" && typeof value === "string" && value) { try { return activityValue(JSON.parse(value), names); } catch {} } if ("type" in change && change.type === "checkbox") return value === "true" ? "Yes" : value === "false" ? "No" : "—"; return activityValue(value, names); };
     return <>{formatted(change.before)} → {formatted(change.after)}</>;
   }
   return activityValue(change, names);

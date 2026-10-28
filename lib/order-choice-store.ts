@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../generated/prisma/client";
 import { managedChoice, normalizeChoice } from "./order-choice-policy";
+import { isSuperAdminAccount } from "./super-admin-policy";
 export class ChoiceError extends Error {}
 type ChoiceEdit = { fieldKey: string; label: string } | { id: string; active: boolean; version: number } | { id: string; version: number; direction: "up" | "down"; neighborId: string; neighborVersion: number };
 export function readOrderChoices(db: PrismaClient) {
@@ -18,7 +19,7 @@ export async function changeOrderChoice(db: PrismaClient, actorId: string, input
   return db.$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('order-dropdown-choices'))`;
     const actor = await tx.appUser.findUnique({ where: { id: actorId } });
-    if (!actor?.active || actor.role !== "ADMIN" || actor.loginDeletionRequestedAt || actor.loginDeletedAt) throw new ChoiceError("Administrator access required.");
+    if (!actor?.active || actor.role !== "ADMIN" || actor.loginDeletionRequestedAt || actor.loginDeletedAt || !isSuperAdminAccount(actor.email)) throw new ChoiceError("Super Administrator access required.");
     if ("fieldKey" in input) {
       const label = input.label.trim().replace(/\s+/g, " ");
       const normalizedLabel = normalizeChoice(label);

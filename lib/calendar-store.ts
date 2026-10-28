@@ -92,7 +92,7 @@ function removePerson(details: EventDetails, id: string): EventDetails {
   return { ...details, people, primaryPerson: people.includes(details.primaryPerson) ? details.primaryPerson : people[0] ?? "" };
 }
 async function personEvents(tx: Prisma.TransactionClient, id: string) {
-  const rows = await tx.calendarEntry.findMany({ take: 10001, orderBy: { id: "asc" } });
+  const rows = await tx.calendarEntry.findMany({ where: { kind: { in: ["management", "employee"] } }, take: 10001, orderBy: { id: "asc" } });
   if (rows.length > 10000) throw new Error("Calendar deletion capacity reached. Contact the maintainer before deleting names.");
   return rows.filter(row => referencesPerson(row.payload as unknown as EventDetails, row.exceptions as unknown as Entry["exceptions"], id));
 }

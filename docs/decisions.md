@@ -116,3 +116,17 @@ October 15 comment-recipient correction: general new-comment bell alerts go only
 October 17 Unit Price correction: Kent approved retaining decimal storage for reporting while accepting plain amounts, optional leading dollar signs and correctly grouped thousands commas (126, 126.00, $126.00, $1,260.00). Normalize exactly before persistence, conflict comparison and history; reject words, malformed separators, excessive precision and out-of-range values without rounding/guessing. Quantity keeps its existing six-decimal validation. Show item validation next to the field and keep save-failure feedback in the sticky toolbar, with a Review item errors control. No schema migration or report-calculation change.
 
 October 20: Kent authorized Daryl's report status filter. All Orders includes Pending/In Progress/Expedite/Complete; Open Orders includes Pending/In Progress/Expedite; Completed Orders includes Complete only. Voided and Trash remain excluded in every scope.
+
+October 28: Kent requested Pending Credit as the shorter display label for Pending Credit Check. Preserve Pending as the underlying status so orders/filtering/report eligibility/closeout rules require no migration.
+
+October 28 Freight-Shipping configuration is a database setting update, not a schema migration: deactivate NA/Freight Collect; add or reactivate In-House Delivery; alphabetize active choices without altering saved order fields. Other active administrator-added choices are retained and sorted.
+
+October 28: Kent confirmed Store Name should behave like Invoice Customer reporting, using saved text_21__1 rather than invoice identity. No inferred customer/store aliases, grouping catalog or schema changes.
+
+October 28: Start with notice-only vacation blackouts, not request enforcement. Store separate vacation-blackout CalendarEntry records and immutable CalendarAudit actions; use date-only inclusive bounds and optimistic revisions. No schema migration or automatic Thanksgiving dates. Future enforcement can reuse ranges after explicit approval.
+
+October 28: Kent/team requested Super Admin-only sales order dropdown and field administration for the time being. This supersedes earlier Admin permissions for those two configuration areas; no delegation controls added. Calendar settings and other administrative permissions are unchanged.
+
+October 28 Kent approved apostrophe-insensitive customer/store reports and existing-name entry suggestions without a supplied store list. Keep actual saved spelling and free-text entry. Suggest up to ten names from saved non-Trash/non-Voided orders; no fuzzy matches or catalog introduced. No schema migration.
+
+October 28 Kent approved personal suggestions for item descriptions and Description of Service only. Reuse immutable actor-scoped order save history instead of browser storage or a new personal-history table. Creator/assignee identity is not a substitute for actual recorded text changes. Exclude superseded text no longer present on its source order. Existing Invoice To/Store Name suggestions stay shared. No schema migration.
