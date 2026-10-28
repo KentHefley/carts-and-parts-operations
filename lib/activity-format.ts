@@ -1,4 +1,9 @@
 type Item = Record<string, unknown>;
+const activityDateFormat = new Intl.DateTimeFormat("en-US", {
+  month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit",
+  timeZone: "America/Chicago", timeZoneName: "short",
+});
+export function activityTimestamp(value: Date) { return activityDateFormat.format(value); }
 const columns = [["description", "Description"], ["quantity", "Quantity"], ["unitPrice", "Unit Price"]] as const;
 const isItem = (value: unknown): value is Item => !!value && typeof value === "object" && !Array.isArray(value);
 

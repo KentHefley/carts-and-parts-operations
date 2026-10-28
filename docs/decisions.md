@@ -65,7 +65,7 @@ Kent approved all six supplied recommendations on October 5, 2026: terminal-stat
 - Review the complete returned Monday column inventory and map newly discovered service/part/time/closeout fields, duplicate Miles/WO Additional Info, distinct Freight fields, and legacy dropdown values. Confirm Maint/Service behavior for automatic expansion. Do not drop source fields or silently reinterpret them; fixed email selection remains unchanged.
 - Preserve manual Labor Price and Travel Price; do not add rate-based calculation. Resolve remaining total inputs when implementing pricing, without inventing NTE enforcement, tax/discount behavior or AM calculations. Optional blank handling and charge-before-total rounding are agreed; decimal tie-breaking mode remains undefined. Hours Worked edge cases remain to be defined.
 - Review wireframes for screens in screens.md and styled light/dark mockups.
-- Define audit-display time zone. America/Chicago is confirmed for Date Entered defaults/report date boundaries; calendar timed events use event-location time zone.
+- October 27: activity logs display America/Chicago with automatic CST/CDT adjustment. Stored audit instants stay unchanged; calendar timed events retain event-location time zones.
 - Define restored-file availability, notification behavior, and inactive-assignee flag presentation for orders restored from Trash. Previous status/assignments are retained.
 - Resolve whether extra item rows may be removed and whether default blank three rows must always remain.
 - Confirm other copied job-specific fields/notes beyond the explicitly agreed reset list.
