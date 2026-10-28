@@ -97,6 +97,7 @@ th,td { padding:14px 10px; border-bottom:1px solid #6b7280; text-align:left; whi
 .activity-list dt { font-weight:600; margin-top:12px; }
 .status-picker { max-width:230px; }
 .status-picker .status-box { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+.status-picker > summary.status-box { cursor:pointer; }
 .status-picker button { display:block; width:100%; margin-top:4px; text-align:left; }
 .order-page { width:100%; max-width:1100px; margin:auto; padding:24px; }
 .order-header h1 { font-size:24px; font-weight:700; }
