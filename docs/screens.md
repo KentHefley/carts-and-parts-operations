@@ -183,3 +183,5 @@ October 28 Administration: show the bottom Dropdown Choices and Add Sales Order 
 October 28 Invoice To and Store Name: optional keyboard-accessible saved-name suggestions appear while typing at least two characters. Choose with arrows/Enter or click; Escape/click-away closes. Lists are separate by field, ranked by saved frequency and limited to ten names. Manual entry works without suggestions. Report customer/store filters explain apostrophe matching and lack of spelling inference.
 
 October 28 Description of Service and each item Description reuse the saved-text suggestion control with personal-history helper text. Start after two characters; choose with arrows/Enter or click, dismiss with Escape/click-away. Item selection updates only that row's description. No automatic completion or price/quantity changes.
+
+October 29 Service and Labor: In House Refurbs followed immediately by Freight text field; remove that text field from Items and Pricing.

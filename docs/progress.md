@@ -340,3 +340,7 @@ October 28 committed feature batch deployed to pilot: source68c4937, Ready dpl_A
 
 October 28 follow-up: added pointer cursor only to the clickable status summary inside an order's status picker. Actual stylesheet browser fixture confirmed pointer on picker, unchanged read-only status cursor and dropdown opening. CSS-only; not deployed yet.
 October 28 status pointer is now deployed to pilot: dpl_7RTreapmcBwBU96f6n85ufY1tpZx Ready and stable alias confirmed. Staged and stable sign-in/configuration plus actual published CSS rule verified. Remote production build/types passed. Pending local commit includes this CSS-only change and release records.
+
+October 29 Freight text field default and saved development layout corrected to Service and Labor immediately after In House Refurbs. Guarded maintenance script applied/read back and repeated with no change; other definitions/labels/types preserved. Pilot unapplied. Build verification pending.
+October 29 Freight placement focused lint and production build passed. Refresh a saved local order for review. Pilot application requires explicit targeted settings update as well as code deployment; pending authorization.
+October 29 Freight placement deployed to pilot with authorization. New Ready release dpl_FRYp6CKvuUM8dqoQUoxLHJu7yyQQ promoted and stable address verified. Pilot saved layout already correct before release and reverified read-only afterward; no pilot database changes. Remote build/types and hosted Pilot/Clerk checks passed.

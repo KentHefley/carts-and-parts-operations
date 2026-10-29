@@ -300,3 +300,7 @@ October 28 pilot release verification: source68c4937 remote locked install repor
 
 October 28 status cursor: actual stylesheet fixture computed pointer for status-picker summary and auto for read-only badge; click opened the dropdown. No status logic changes or production build performed for this CSS-only adjustment.
 October 28 status-pointer hosted verification: remote build/TypeScript passed; staged and stable sign-in returned200 with correct Pilot/Clerk configuration. Retrieved linked published stylesheet and verified scoped status-picker summary cursor:pointer rule. Stable address resolves to Ready dpl_7RTreapmcBwBU96f6n85ufY1tpZx.
+
+October 29 Freight relocation: guarded development apply and repeat passed. Readback verifies target section/immediate predecessor, same field count, all other field definitions unchanged and Freight key/label/type/active/help/options preserved. No order-write operations or schema migration. Pilot untouched.
+October 29 Freight placement focused ESLint and production build/TypeScript passed. Signed-in local visual review remains with Kent.
+October 29 Freight pilot: default-layout assertions and remote build/TypeScript passed; staged and stable sign-in/identity checks passed. Pilot target read-only layout preview returned changed:false before/after deployment, confirming Freight already immediately follows In House Refurbs in Service and Labor. No pilot settings/order writes. Authenticated visual review remains with Kent.

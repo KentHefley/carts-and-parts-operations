@@ -130,3 +130,5 @@ October 28: Kent/team requested Super Admin-only sales order dropdown and field 
 October 28 Kent approved apostrophe-insensitive customer/store reports and existing-name entry suggestions without a supplied store list. Keep actual saved spelling and free-text entry. Suggest up to ten names from saved non-Trash/non-Voided orders; no fuzzy matches or catalog introduced. No schema migration.
 
 October 28 Kent approved personal suggestions for item descriptions and Description of Service only. Reuse immutable actor-scoped order save history instead of browser storage or a new personal-history table. Creator/assignee identity is not a substitute for actual recorded text changes. Exclude superseded text no longer present on its source order. Existing Invoice To/Store Name suggestions stay shared. No schema migration.
+
+October 29 field placement correction: core-field sections remain protected in ordinary Administration. Use narrowly scoped, explicitly targeted scripts/move-freight-field.ts for the approved Freight relocation, with current Super Admin authorization, layout lock/version check and audit. No order/schema changes.

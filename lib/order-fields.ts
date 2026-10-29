@@ -325,7 +325,7 @@ export const orderFields: FieldDefinition[] = [
   {
     "key": "text772__1",
     "label": "Freight",
-    "section": "Items and Pricing",
+    "section": "Service and Labor",
     "type": "text"
   },
   {
