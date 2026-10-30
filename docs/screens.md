@@ -1,5 +1,7 @@
 # Screen and styling plan
 
+October 29 local board layout: both order boards use 44px rows, ellipsis/full-value hover/focus text, seven single-line data columns, sticky column headings and a table-only scroll region capped at 485px. Narrow viewports scroll the table horizontally. Filters and the matching count/Load More remain outside that region. Start with 50 database records; Load More fetches the next 50. Select All means loaded orders, not every matching database record. Failed bulk operations remain in a bounded results panel with Retry Failed Orders, even if the original row moves beyond the loaded range. Pilot review/release remains pending.
+
 October 15 custom-field screen implemented locally: Administration → Add Sales Order Field provides section selection, Move Up/Move Down and preview before saving, with separate activation and confirmed deletion controls. Order Details shows active fields in the saved layout and collapsed inactive values. Print Saved Order opens a saved snapshot for browser printing/PDF. See `custom-fields-milestone.md`.
 
 Agreed direction, October 5, 2026. This is a browser-based responsive web app. Screens described here are planned, not implemented. Review wireframes and styled mockups before application development.

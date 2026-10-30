@@ -26,6 +26,7 @@
     "test:orders": "tsx scripts/test-orders.ts",
     "test:copies": "tsx scripts/test-copy-orders.ts",
     "test:selection": "tsx scripts/test-order-selection.ts",
+    "test:boards": "tsx scripts/test-order-board.ts",
     "test:email": "tsx --test tests/order-email.test.ts && tsx scripts/test-email.ts",
     "test:price-books": "tsx scripts/test-price-books.ts",
     "test:calendars": "tsx --test tests/calendar-model.test.ts && tsx scripts/test-calendars.ts",

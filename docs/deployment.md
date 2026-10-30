@@ -1,5 +1,9 @@
 # Development maintenance setup
 
+October 29 follow-up: after local review, Kent explicitly authorized pilot board deployment. Both sorting indexes are now applied to Pilot and deployment `dpl_Erjauvd89H84kTdBaq8soicXbbRD` is promoted/Ready at the normal pilot URL. See `pilot-order-board-release-2026-10-29.md`; this supersedes the local-only status below. Development sample data remains separate. No initial live launch or Git integration was performed.
+
+October 29 order-board paging is local only. Migration `20261029010000_order_board_paging` adds two partial expression indexes for open/completed JSON date sorting; it changes no fields or saved values. Applied to verified Development. On a later authorized pilot release, verify the Pilot target and deploy migrations before promoting the tested deployment. Do not infer authorization to migrate or deploy from this note. Dashboard's existing assigned-order query is outside this milestone.
+
 October 15 custom-field migrations: `20261015030000_order_field_layout` adds versioned layout/configuration audit; `20261015040000_custom_field_amounts` adds related exact decimal currency values with order-delete cascade. Both applied only through the guarded development migration script. Expired order purge explicitly removes decimal values while retaining its minimal order tombstone. No live migrations or deployment performed.
 
 No live launch or deployment is authorized by this document. Storage fails closed unless it matches the explicitly selected, enrolled development or pilot services and Clerk test configuration. See pilot-setup.md for the current hosted pilot preparation; the pilot Vercel project's production target is distinct from future live operation.

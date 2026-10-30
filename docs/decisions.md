@@ -1,5 +1,9 @@
 # Decisions and unresolved details
 
+October 29 board-release follow-up: Kent reviewed the local implementation and authorized pilot promotion. Release `dpl_Erjauvd89H84kTdBaq8soicXbbRD` is verified/promoted; index migration applied to Pilot. Development test orders remain local. This supersedes the pending-authorization wording in the earlier implementation decision below; initial live launch is still separate.
+
+October 29 approved board paging: 50 records per database request on Sales Orders and Completed Sales Orders; Load More rather than fetching the entire board. Preserve Date Entered/status-change date sorting with creation-time/UUID ties. Full-database Name/SO Number/Status filtering; existing permissions unchanged. Background refresh rebuilds only the loaded page count through bounded cursor requests, commits the result together, and preserves table scroll. Changed filters clear selections; moved/trashed rows cannot leave hidden selections. No production/pilot deployment authorized for this work yet.
+
 October 16 latest Hours Worked display correction: Kent requires exact hours and minutes, replacing the earlier two-decimal display. 7:20 AM–3:30 PM shows 8h 10m; 9:30 PM–3:24 AM shows 5h 54m. Blank/overnight/equal-zero behavior remains unchanged. No minute rounding or price calculation is introduced.
 
 October 16 Hours Worked resolved: Kent approved blank until both times are entered, ordinary subtraction, overnight when Time Out is earlier, zero for equal times, and two decimal places. Implemented as a read-only derived field in Service and Labor, including existing saved layouts. This supersedes older unresolved Hours Worked edge-case notes below; manual labor/travel pricing remains separate.

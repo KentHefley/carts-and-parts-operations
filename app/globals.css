@@ -76,6 +76,7 @@ a { color:#3b82f6; text-decoration:underline; }
 .selection-results { border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; background:var(--paper); }
 .selection-results h2 { font-size:16px; margin-top:0; }
 .selection-results li { margin-bottom:8px; overflow-wrap:anywhere; }
+.selection-results ul { max-height:240px; overflow:auto; }
 .selection-cell { width:44px; text-align:center; }
 .selection-cell input[type="checkbox"] { width:18px; height:18px; accent-color:var(--blue); cursor:pointer; }
 tr[data-selected] { background:var(--selected); }
@@ -217,6 +218,16 @@ a.dashboard-card:hover { text-decoration:none; border-color:var(--blue); backgro
 .primary-button,.save-toolbar>button:last-child,.closeout-actions>button:first-child { background:var(--orange); border-color:var(--orange); color:var(--on-orange); font-weight:600; }
 .list-filters { gap:14px; padding:0 0 22px; }
 .table-scroll { border:1px solid var(--line); border-radius:8px; background:var(--paper); }
+.order-board-scroll { max-height:485px; overflow:auto; scrollbar-gutter:stable; overflow-anchor:none; }
+.order-board-table { table-layout:fixed; min-width:1100px; border-collapse:separate; border-spacing:0; }
+.order-board-table th { position:sticky; top:0; z-index:1; height:44px; box-shadow:0 1px 0 var(--line); }
+.order-board-table td { height:44px; padding:6px 10px; white-space:nowrap; }
+.order-board-table .board-value { display:block; position:relative; }
+.board-value-text { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.order-board-table .board-value[data-full-value]:focus::after,.order-board-table .board-value[data-full-value]:hover::after { content:attr(data-full-value); position:absolute; bottom:100%; right:0; z-index:2; padding:6px 8px; border:1px solid var(--line); border-radius:4px; background:var(--paper); color:var(--foreground); width:max-content; max-width:320px; white-space:normal; overflow-wrap:anywhere; box-shadow:0 2px 8px #0002; }
+.board-select-col { width:44px; }.board-number-col { width:120px; }.board-name-col { width:25%; }.board-status-col { width:132px; }.board-division-col { width:135px; }.board-job-col { width:115px; }.board-date-col { width:145px; }.board-assigned-col { width:20%; }
+.board-footer { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-top:16px; color:var(--muted); font-size:13px; }
+.board-footer p { margin:0; }.board-footer button { flex-shrink:0; }.board-error { margin-bottom:12px; }
 th { background:var(--table-head); color:var(--muted); font-size:12px; font-weight:600; }
 th,td { padding:13px 10px; border-color:var(--line); }
 td { font-size:13px; }

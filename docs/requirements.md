@@ -1,5 +1,7 @@
 # Carts and Parts Operations requirements
 
+October 29 board paging: Kent approved single-line, consistent-height rows with seven data columns, an orders-only scrollbar/sticky headings, and 50-order database pages with Load More. Name, SO Number and Status search all matching saved records. Preserve filters, loaded range, scroll and eligible selections during background updates; clear selections when filters change. Existing bulk permissions remain unchanged. Local implementation/review first; see `order-board-milestone.md`.
+
 October 15 custom-field decisions: Kent approved `custom-fields-milestone.md`, including optional Currency support without converting existing fields. Its placement, type-change, copy, printing, inactive-value and labeled-history rules supersede earlier unresolved custom-field details below. Implemented locally; authenticated review pending.
 
 October 14 user deletion: Super Admin alone can permanently delete another employee's Clerk login. Other admins retain deactivate/reactivate access. Preserve the inactive AppUser historical identity and all company order/file/history associations. Deletion pending/complete cannot be reactivated through access controls or invitations; failed external deletion remains blocked and retryable by Super Admin. Super Admin cannot be deleted. Delegating deletion to other admins is deferred.
