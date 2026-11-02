@@ -1,5 +1,9 @@
 # Screen and styling plan
 
+November 2 release follow-up: Kent approved the local form/email revision and it is now deployed to Pilot as `dpl_8Yg6exs1abDaYyX48Wf76DchKPpf`; see the release note. The implementation description below remains the agreed layout; its pending-release wording is superseded.
+
+November 2 local change: Description of Service and AM Description no longer appear in the order form or saved-order print view. Miles retains its existing numeric control/value and is last in Items and Pricing, immediately after Travel Price and before the item rows. New text/HTML SO emails omit both retired descriptions and put Miles before used item rows; prices remain excluded. Historical values are retained. Pilot release is pending local review.
+
 October 29 local board layout: both order boards use 44px rows, ellipsis/full-value hover/focus text, seven single-line data columns, sticky column headings and a table-only scroll region capped at 485px. Narrow viewports scroll the table horizontally. Filters and the matching count/Load More remain outside that region. Start with 50 database records; Load More fetches the next 50. Select All means loaded orders, not every matching database record. Failed bulk operations remain in a bounded results panel with Retry Failed Orders, even if the original row moves beyond the loaded range. Pilot review/release remains pending.
 
 October 15 custom-field screen implemented locally: Administration → Add Sales Order Field provides section selection, Move Up/Move Down and preview before saving, with separate activation and confirmed deletion controls. Order Details shows active fields in the saved layout and collapsed inactive values. Print Saved Order opens a saved snapshot for browser printing/PDF. See `custom-fields-milestone.md`.

@@ -95,12 +95,6 @@ export const orderFields: FieldDefinition[] = [
     ]
   },
   {
-    "key": "numbers__1",
-    "label": "Miles",
-    "section": "Service and Labor",
-    "type": "number"
-  },
-  {
     "key": "text_13__1",
     "label": "Invoice To",
     "section": "Billing and Store Information",
@@ -225,6 +219,12 @@ export const orderFields: FieldDefinition[] = [
     "label": "Travel Price",
     "section": "Items and Pricing",
     "type": "text"
+  },
+  {
+    "key": "numbers__1",
+    "label": "Miles",
+    "section": "Items and Pricing",
+    "type": "number"
   },
   {
     "key": "text14__1",

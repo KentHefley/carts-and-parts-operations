@@ -1,0 +1,9 @@
+# Dependency audit follow-up — November 2, 2026
+
+The form/email Pilot build's npm audit reported **23 moderate package findings, zero high/critical**. A read-only local `npm audit --json` reproduced them. They trace to **one unique advisory**, [GHSA-g3hv-75wg-m249 / CVE-2026-118764](https://github.com/advisories/GHSA-g3hv-75wg-m249), rather than 23 distinct advisories. No dependency/lockfile change was part of the form/email release.
+
+The reviewed advisory describes excessive CPU/memory use from attacker-controlled glob-pattern preprocessing, including minimatch 10.2.6 with optimization level 2 or higher; npm marks versions below 11.0.1 affected. Current lockfile has dev-only minimatch 10.2.6 through TypeScript ESLint, plus runtime-marked legacy minimatch 3.1.5 and 5.1.9 through ExcelJS/archiver-related dependencies. Validate upstream range/legacy-version applicability before selecting a compatible fix; do not blindly override all majors or run `npm audit fix --force`. npm currently suggests major/downgrade changes to ESLint/ExcelJS that require deliberate regression testing.
+
+Scoped exposure review: no direct minimatch or `.glob()` calls were found in application/library/scripts source. Reports use `workbook.xlsx.writeBuffer()` in `lib/report-export.ts`; installed ExcelJS `lib/utils/zip-stream.js` uses JSZip for that path. No user-supplied glob-pattern route was identified. This is a scoped applicability assessment, not a guarantee or a full dependency audit. The existing invitation-only Pilot release continued with the findings explicitly recorded; no new package was introduced.
+
+Before live production: review upstream-compatible remediation in an isolated dependency-update branch; rerun audit, lint/build, permission/workflow checks and Excel/CSV/PDF exports before a tested deployment. Keep separate from the approved business-field changes. Raw audit report is in ignored `tmp/service-release-audit-2026-11-02.json`.

@@ -1,5 +1,21 @@
 # Development verification
 
+November 2 Pilot form/email release: remote build/types passed; staged and stable HTTP checks verified correct Pilot/Clerk identity, assets and access denial without employee login. Pilot layout has no stored row and the new defaults meet the approved layout, so guarded apply was a no-op. Job Type Other-last ordering verified. New stable Ready deployment `dpl_8Yg6exs1abDaYyX48Wf76DchKPpf`; see `pilot-service-layout-release-2026-11-02.md`. npm audit's moderate findings were reviewed/documented separately, not fixed automatically. No real email sent. Kent's signed-in Pilot review follows refresh.
+
+## November 2 — Service and Labor form/email revision
+
+- `npx tsx --test tests/service-layout.test.ts tests/order-email.test.ts`: seven passing tests for new/default and existing layouts, retained legacy keys, unrelated-field preservation, idempotency/revision changes, unexpected-layout refusal, email blanks/zero Miles/order, removed labels/values, price exclusion, HTML escaping and unused item numbering.
+- Applied `scripts/update-service-layout.ts --environment=development --apply` using the target guard, field-settings lock, approved Super Admin, version check and audit. Readback verifies inactive retired controls and final Travel Price/Miles ordering; a later dry run reports `changed:false`. Script updates no SalesOrder rows or existing email payloads.
+- `npx tsx scripts/test-custom-fields.ts` passed with retired inactive core definitions: normal settings edits still save; toggling either retired core activation state is rejected. Existing types, permissions, conflicts, copies/deletions and history checks passed. Synthetic records/custom definitions cleaned up.
+- `npx tsx scripts/test-email.ts` passed using mock transports (without `--send-synthetic`). Real Development database fixture retained retired service/AM values and Miles after an unrelated edit, omitted both old values from queued email text/HTML, and preserved existing retry/deduplication/allowlist behavior. Fixtures cleaned up; no real email sent.
+- Source lint (`npx eslint app lib scripts tests --ignore-pattern 'tmp/**' --ignore-pattern '.agents/**'`), `npx tsc --noEmit`, production build and Next dev all-route compilation passed. Unit/integration test fixtures remain separate from employee records.
+- Actual OrderForm, PrintDocument and orderEmailTemplate were bundled into an ignored synthetic browser fixture with stubbed persistence/email actions. Eleven assertions passed: layout placement/type/value, no retired controls, print placement/omission, HTML email order/price/legacy exclusions, unused item numbering, same Miles save key, and hidden-value preservation. At 390px viewport the document remains 390px wide. Fixture required the same build-time public environment substitution that Next provides; no application workaround was needed.
+- No authenticated browser bypass: the actual dev app redirects the isolated browser to sign-in. Kent should review locally while signed in. Pilot configuration and email-code release must be coordinated after authorization; no Pilot changes in this milestone.
+
+## November 2 — Maintenance job type settings
+
+Read-only previews verified Development/Pilot targets and existing choices. Applied additions with transaction-level actor approval and choice audit records. Readback using the same `readOrderChoices`/`choiceOptions` path as Order Details verified both requested active options. Transaction assertions verified unrelated dropdown records/positions were unchanged and each requested normalized label had exactly one active entry. Development retained its existing Maintenance entry; Pilot added both. No order-record writes or email/notification functions are part of this operation. No application code or schema was changed; no redeploy required.
+
 ## October 29 — bounded order boards
 
 Pilot release follow-up: Kent's authenticated local review passed and he authorized deployment. Guarded Pilot migration/index/read checks and staged/stable hosted sign-in, Pilot/Clerk identity, new stylesheet, API 401 and board redirect checks passed. New Ready deployment: `dpl_Erjauvd89H84kTdBaq8soicXbbRD`. No employee-authentication bypass or Pilot fixtures. Signed-in post-release pilot review is with Kent. See the release note for exact scope/rollback.

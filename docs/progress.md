@@ -1,5 +1,32 @@
 # Project progress
 
+## November 2 — reviewed form/email changes deployed to Pilot
+
+Kent authorized release after Development review. Promoted Ready `dpl_8Yg6exs1abDaYyX48Wf76DchKPpf` to the normal pilot URL. Remote build/types and staged/stable identity/asset/access checks passed. Pilot uses default layout version 0 with no stored layout row: no layout/order/email-snapshot write or migration was needed. Verified retired controls, Miles placement and Job Type Other-last settings using the approved defaults/settings read path. See `pilot-service-layout-release-2026-11-02.md` for rollback and release evidence.
+
+Remote/local npm audit surfaced 23 moderate package findings linked to one minimatch advisory; no high/critical and no changed dependencies. Scoped application review found no user-controlled glob route and confirmed report writeBuffer uses JSZip. Recorded separate remediation before production in `dependency-review-2026-11-02.md`; do not use force fixes. The Clerk auto-retry/recovery follow-up also remains unimplemented. Source/release notes await Kent's Git commit/push.
+
+November 2 Job Type follow-up: Kent requested Other as the last choice. Applied audited, target-guarded `scripts/move-job-type-other-last.ts` to Development and Pilot. Readback confirms Maintenance, Maintenance CM, Other as the final three active entries in both; all other choice rows/positions unchanged. This settings operation did not change orders or deploy code. The separate Service and Labor/email release is recorded above.
+
+## November 2 — Service and Labor form/email revision, local review pending
+
+- Removed Description of Service/AM Description controls by marking their core definitions inactive in defaults and the saved Development layout. Their keys, values and audit history remain intact. Moved unchanged Miles to Items and Pricing directly after Travel Price, last before items. Print follows the same active saved layout.
+- Updated the explicit SO email selection: omit both retired descriptions, move Miles before used item rows, preserve blank/zero Miles and all other selection/price/unused-item rules. Existing stored email payloads/retries are not rewritten. No real emails sent.
+- Adjusted core-layout protection to compare activation against the saved core state, allowing unrelated Administration saves with retired inactive definitions while rejecting reactivation/deactivation attempts. Guarded `scripts/update-service-layout.ts` supports explicit Development/Pilot preview, optimistic version checks, settings audit and idempotent application; applied only to Development. Post-test preview confirms no further change needed.
+- Seven focused layout/email tests, Development custom-field and mocked-email integration suites, source lint/types, production build and all-route dev compilation passed. Actual form/print/email components passed 11 synthetic-browser assertions; responsive 390px viewport has no document overflow. The isolated app browser is signed out; Kent's local authenticated review remains. See `testing.md` and `service-labor-layout-2026-11-02.md`.
+- Local server at localhost:3000. No Pilot layout/deployment change yet. Next: Kent reviews locally, then authorize coordinated Pilot configuration/code release. The separate transient Clerk retry/recovery follow-up remains unimplemented and documented for production preparation.
+
+## November 2 — intermittent page-load investigation
+
+Kent reported a temporary unavailable-page screen around 11:15 AM Central while another admin edited an order. Scoped Pilot logs found a Clerk 502 during `/sales-orders` loading at 11:12:33 AM CST, followed by another page request three seconds later and an order-page request shortly afterward. Strong candidate for the incident; not conclusive browser attribution. No database timeout/concurrency exception in that window. Recorded `pilot-auth-incident-2026-11-02.md`; recommended bounded read-only authentication retry and an in-app recovery boundary before production. No application or pilot changes made during investigation.
+
+## November 2 — Maintenance job types
+
+- Added `Maintenance` and `Maintenance CM` to Pilot Job Type (`dropdown__1`). Development already had active Maintenance, so only Maintenance CM was added there.
+- Used explicit target-guarded `scripts/add-maintenance-job-types.ts` previews and `--apply` operations. Updates run under the existing dropdown advisory lock, require Kent's active Super Admin account, record choice audit entries, preserve unrelated rows, and verify both active choices through the form's `choiceOptions` mapping. The script defaults to preview and skips already-active requested choices.
+- Database configuration only: no order values, assignments, notifications, emails, schema, permissions or deployment changed. Refresh an open order to retrieve updated choices.
+- Carry these approved settings into production provisioning. Script and documentation await Git commit/push.
+
 ## October 29 — order board paging, released to pilot
 
 Kent completed local review and authorized release. Promoted verified `dpl_Erjauvd89H84kTdBaq8soicXbbRD` to the normal pilot URL; additive sorting indexes applied to verified Pilot. Staged and stable HTTP/identity/style/access checks passed. Development samples were not copied. See `pilot-order-board-release-2026-10-29.md` for checks and rollback target. Commit/push remains with Kent.

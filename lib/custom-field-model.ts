@@ -1,4 +1,5 @@
 import { orderFields, type FieldDefinition } from "./order-fields";
+import { retiredServiceField } from "./service-layout";
 
 export const formSections = ["Order Overview", "Billing and Store Information", "Items and Pricing", "Additional Information", "Completion", "Service and Labor"];
 export const customTypes = ["text", "textarea", "number", "currency", "date", "time", "select", "checkbox", "employees"] as const;
@@ -12,7 +13,7 @@ const special: FieldDefinition[] = [
   { key: "status", label: "Status", type: "status" },
 ].map(field => ({ ...field, section: "Order Overview" }));
 export function defaultLayout(): FieldLayout {
-  return { version: 0, fields: includeHoursWorked(formSections.flatMap(section => [...special, ...orderFields].filter(field => field.section === section).map(field => ({ ...field, options: field.options ?? [], help: "", active: true, custom: false, used: false, revision: 1 })))) };
+  return { version: 0, fields: includeHoursWorked(formSections.flatMap(section => [...special, ...orderFields].filter(field => field.section === section).map(field => ({ ...field, options: field.options ?? [], help: "", active: !retiredServiceField(field.key), custom: false, used: false, revision: 1 })))) };
 }
 export function includeHoursWorked(fields: LayoutField[]): LayoutField[] {
   if (fields.some(field => field.key === "hoursWorked")) return fields;

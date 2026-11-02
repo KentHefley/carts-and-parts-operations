@@ -1,5 +1,7 @@
 # Development maintenance setup
 
+November 2 form/email release: promoted `dpl_8Yg6exs1abDaYyX48Wf76DchKPpf`; prior code rollback target `dpl_Erjauvd89H84kTdBaq8soicXbbRD`. No saved Pilot layout row existed and the updated defaults supplied the approved form, so no schema/settings/order write was needed. See `pilot-service-layout-release-2026-11-02.md` for recovery cautions if a layout is later persisted, and `dependency-review-2026-11-02.md` for the moderate audit follow-up before initial live launch.
+
 October 29 follow-up: after local review, Kent explicitly authorized pilot board deployment. Both sorting indexes are now applied to Pilot and deployment `dpl_Erjauvd89H84kTdBaq8soicXbbRD` is promoted/Ready at the normal pilot URL. See `pilot-order-board-release-2026-10-29.md`; this supersedes the local-only status below. Development sample data remains separate. No initial live launch or Git integration was performed.
 
 October 29 order-board paging is local only. Migration `20261029010000_order_board_paging` adds two partial expression indexes for open/completed JSON date sorting; it changes no fields or saved values. Applied to verified Development. On a later authorized pilot release, verify the Pilot target and deploy migrations before promoting the tested deployment. Do not infer authorization to migrate or deploy from this note. Dashboard's existing assigned-order query is outside this milestone.

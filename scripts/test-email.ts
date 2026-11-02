@@ -16,7 +16,7 @@ async function main() {
     assert.equal(kent.active, true);
     await database.appUser.create({ data: { id: otherId, clerkUserId: `email-test-${otherId}`, email: `${otherId}@example.invalid`, role: "USER" } });
     let order = await reserveOrder(database, kent.id, randomUUID()); ids.push(order.id);
-    const saved = await saveOrder(database, kent.id, { id: order.id, base: order.fields, patch: { name: "Synthetic SO email verification", text_28__1: "EMAIL-TEST", text_13__1: "Sample customer" }, baseAssigneeIds: [], assigneeIds: [kent.id] });
+    const saved = await saveOrder(database, kent.id, { id: order.id, base: order.fields, patch: { name: "Synthetic SO email verification", text_28__1: "EMAIL-TEST", text_13__1: "Sample customer", numbers__1: "42.5", text_32__1: "LEGACY_SERVICE_PRESERVE", text14__1: "LEGACY_AM_PRESERVE" }, baseAssigneeIds: [], assigneeIds: [kent.id] });
     assert.equal(saved.ok, true); if (!saved.ok) throw new Error("Fixture save failed"); order = saved.order;
     await assert.rejects(queueOrderEmail(database, otherId, order, randomUUID()), /creator|administrator/);
     await database.appUser.update({ where: { id: otherId }, data: { role: "ADMIN", active: false } });
@@ -27,9 +27,11 @@ async function main() {
     const [first, repeated] = await Promise.all([queueOrderEmail(database, kent.id, order, requestKey), queueOrderEmail(database, kent.id, order, requestKey)]);
     assert.equal(first, repeated);
     const queued = await database.orderEmail.findUniqueOrThrow({ where: { id: first } });
-    const queuedPayload = queued.payload as { from: string; reply_to: string };
+    const queuedPayload = queued.payload as { from: string; reply_to: string; text: string; html: string };
     assert.equal(queuedPayload.from, developmentSender);
     assert.equal(queuedPayload.reply_to, developmentReplyTo);
+    assert.match(queuedPayload.text, /Miles: 42\.5/);
+    assert.doesNotMatch(queuedPayload.text + queuedPayload.html, /LEGACY_SERVICE_PRESERVE|LEGACY_AM_PRESERVE|Description of Service|AM Description/);
     let calls = 0;
     let release!: () => void;
     let started!: () => void;
@@ -41,6 +43,10 @@ async function main() {
     release();
     await assert.rejects(sending, /could not be confirmed/);
     const edited = await saveOrder(database, kent.id, { id: order.id, base: order.fields, patch: { text_28__1: "CHANGED-AFTER-SNAPSHOT" } }); assert.equal(edited.ok, true);
+    const retained = await loadOrder(database, order.id);
+    assert.equal(retained.fields.text_32__1, "LEGACY_SERVICE_PRESERVE");
+    assert.equal(retained.fields.text14__1, "LEGACY_AM_PRESERVE");
+    assert.equal(retained.fields.numbers__1, "42.5");
     await sendQueuedEmail(database, kent.id, first, async (payload, key) => { calls++; assert.match(payload.text, /EMAIL-TEST/); assert.doesNotMatch(payload.text, /CHANGED-AFTER-SNAPSHOT/); assert.equal(key, `so-email/${first}`); return "mock-provider-id"; });
     await sendQueuedEmail(database, kent.id, first, async () => { calls++; throw new Error("Must not resend accepted email"); });
     assert.equal(calls, 2);

@@ -18,6 +18,7 @@ async function main() {
   try {
     await db.appUser.createMany({ data: [admin, user, inactive].map(id => ({ id, clerkUserId: `custom-test-${id}`, email: `${id}@example.invalid`, displayName: `Field Test ${id}`, role: id === admin ? "ADMIN" as const : "USER" as const, active: id !== inactive })) });
     let layout = await readFieldLayout(db); originalVersion = layout.version;
+    for (const key of ["text_32__1", "text14__1"]) await assert.rejects(saveFieldLayout(db, superAdmin, { ...layout, fields: layout.fields.map(field => field.key === key ? { ...field, active: !field.active } : field) }), /protected/);
     const definitions: LayoutField[] = customTypes.map(type => ({ key: `custom_${randomUUID()}`, label: `Synthetic ${type}`, section: "Order Overview", type, help: "Synthetic help", options: type === "select" ? ["One", "Two"] : [], active: true, custom: true, used: false, revision: 1 }));
     const unused: LayoutField = { ...definitions[0], key: `custom_${randomUUID()}`, label: "Unused synthetic field" };
     definitions.push(unused);

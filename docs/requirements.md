@@ -1,5 +1,11 @@
 # Carts and Parts Operations requirements
 
+November 2 Job Type ordering: Kent requested `Other` as the final dropdown choice, after Maintenance and Maintenance CM, keeping all other choices in their existing relative order. Applied to current Development/Pilot settings; retain this order in production provisioning.
+
+November 2 Service and Labor change: retire Description of Service (`text_32__1`) and AM Description (`text14__1`) controls while preserving saved values/history. Move Miles (`numbers__1`) to Items and Pricing immediately after Travel Price and before item rows. Remove both descriptions from newly generated SO emails and place Miles immediately before used items. Kent confirmed existing price exclusions remain. Previously queued email snapshots remain unchanged. See `service-labor-layout-2026-11-02.md`.
+
+November 2 Job Type addition: Kent requested active choices `Maintenance` and `Maintenance CM` in Order Overview. Preserve existing choices, their relative order, and saved order values. These are required production dropdown settings as well as Development/Pilot settings; they introduce no automatic calendar, pricing or section-expansion behavior.
+
 October 29 board paging: Kent approved single-line, consistent-height rows with seven data columns, an orders-only scrollbar/sticky headings, and 50-order database pages with Load More. Name, SO Number and Status search all matching saved records. Preserve filters, loaded range, scroll and eligible selections during background updates; clear selections when filters change. Existing bulk permissions remain unchanged. Local implementation/review first; see `order-board-milestone.md`.
 
 October 15 custom-field decisions: Kent approved `custom-fields-milestone.md`, including optional Currency support without converting existing fields. Its placement, type-change, copy, printing, inactive-value and labeled-history rules supersede earlier unresolved custom-field details below. Implemented locally; authenticated review pending.
