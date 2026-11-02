@@ -384,3 +384,8 @@ October 28 status pointer is now deployed to pilot: dpl_7RTreapmcBwBU96f6n85ufY1
 October 29 Freight text field default and saved development layout corrected to Service and Labor immediately after In House Refurbs. Guarded maintenance script applied/read back and repeated with no change; other definitions/labels/types preserved. Pilot unapplied. Build verification pending.
 October 29 Freight placement focused lint and production build passed. Refresh a saved local order for review. Pilot application requires explicit targeted settings update as well as code deployment; pending authorization.
 October 29 Freight placement deployed to pilot with authorization. New Ready release dpl_FRYp6CKvuUM8dqoQUoxLHJu7yyQQ promoted and stable address verified. Pilot saved layout already correct before release and reverified read-only afterward; no pilot database changes. Remote build/types and hosted Pilot/Clerk checks passed.
+# November 2: Notification panel click-away dismissal
+
+Kent verified this locally and authorized Pilot deployment. Released as Ready `dpl_CUAwGhRjVcCKJjNmyfYbQbpP1B4f` at the usual Pilot URL after the remote production build/TypeScript and staged sign-in, stylesheet and signed-out access checks passed. Previous rollback target: `dpl_8Yg6exs1abDaYyX48Wf76DchKPpf`. No database/settings migration. This supersedes the local-only status below.
+
+The bell panel now closes on an outside pointer press (mouse/touch), retaining inside interactions, the bell toggle and Close button. Dismissal does not mark notifications read. Verified with six browser component-fixture checks using stubbed notification actions, targeted ESLint, TypeScript and a production build. Local change; not yet deployed to Pilot.
