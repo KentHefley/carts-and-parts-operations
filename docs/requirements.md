@@ -1,5 +1,7 @@
 # Carts and Parts Operations requirements
 
+November 23 production setup approved: use operations.cartsandparts.com with separate production services; start with zero sales orders/calendar entries and first SO 25000, retaining current settings and three original price books. Keep the Pilot accessible with its own data and accounts. Production uses plain SO numbers. Preserve existing role, ownership and assignment rules for live invitations and email. Daily encrypted backups retain production archives for 30 days, with the recovery key stored separately.
+
 November 2 Job Type ordering: Kent requested `Other` as the final dropdown choice, after Maintenance and Maintenance CM, keeping all other choices in their existing relative order. Applied to current Development/Pilot settings; retain this order in production provisioning.
 
 November 2 Service and Labor change: retire Description of Service (`text_32__1`) and AM Description (`text14__1`) controls while preserving saved values/history. Move Miles (`numbers__1`) to Items and Pricing immediately after Travel Price and before item rows. Remove both descriptions from newly generated SO emails and place Miles immediately before used items. Kent confirmed existing price exclusions remain. Previously queued email snapshots remain unchanged. See `service-labor-layout-2026-11-02.md`.

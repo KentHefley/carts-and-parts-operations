@@ -2,7 +2,7 @@ import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, CopyOb
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { runtimeEnvironment } from "./environment-policy";
 
-// Deliberately fails closed outside the explicitly enrolled non-live environments.
+// Only the explicitly enrolled environment can access its private bucket.
 export function attachmentStorage() {
   const account = process.env.R2_ACCOUNT_ID;
   const { bucket } = runtimeEnvironment();

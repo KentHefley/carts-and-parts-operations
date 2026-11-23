@@ -1,4 +1,6 @@
 "use server";
+import { orderNumber } from "../../lib/order-number";
+
 import { requireApprovedUser } from "../../lib/access";
 import { getDatabase } from "../../lib/db";
 
@@ -9,7 +11,7 @@ export async function readNotifications() {
     database.notification.count({ where: { recipientId: user.id, readAt: null, order: { deletedAt: null } } }),
     database.notification.findMany({ where: { recipientId: user.id, order: { deletedAt: null } }, orderBy: { updatedAt: "desc" }, take: 50, include: { actor: { select: { email: true, displayName: true } }, order: { select: { number: true, name: true } } } }),
   ]);
-  return { unread, rows: rows.map(row => ({ id: row.id, orderId: row.orderId, number: `DEV-${String(row.order.number).padStart(6, "0")}`, name: row.order.name ?? "Sales Order", actor: row.actor.displayName || row.actor.email, kind: row.kind, read: row.readAt !== null, updatedAt: row.updatedAt.toISOString() })) };
+  return { unread, rows: rows.map(row => ({ id: row.id, orderId: row.orderId, number: orderNumber(row.order.number), name: row.order.name ?? "Sales Order", actor: row.actor.displayName || row.actor.email, kind: row.kind, read: row.readAt !== null, updatedAt: row.updatedAt.toISOString() })) };
 }
 
 export async function markNotificationsRead() {

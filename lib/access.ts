@@ -5,12 +5,14 @@ import { getDatabase } from "./db";
 import { approvedAccess } from "./access-policy";
 import { acceptEmployeeInvitation } from "./invitation-store";
 import { isSuperAdminAccount } from "./super-admin-policy";
+import { recoverIdentity } from "./identity-recovery";
+import { freshIdentity, type EmployeeIdentity } from "./clerk-identity";
 
 // Shared resolution lets the denial screen distinguish an unapproved account
 // from an approved employee who opened an administrator-only route.
 export async function getApprovedUser() {
-  await auth.protect();
-  const identity = await currentUser();
+  const session = await auth.protect();
+  const identity = await recoverIdentity<EmployeeIdentity | null>(() => currentUser(), () => freshIdentity(session.userId, process.env.CLERK_SECRET_KEY!));
   if (!identity) redirect("/sign-in");
   let account = await getDatabase().appUser.findUnique({ where: { clerkUserId: identity.id } });
   const primaryEmail = identity.emailAddresses.find((email) => email.id === identity.primaryEmailAddressId);

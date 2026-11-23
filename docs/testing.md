@@ -1,5 +1,11 @@
 # Development verification
 
+## Production preparation - November 23, 2026
+
+Patched Next 16.4.6 build/TypeScript and scoped source lint passed. npm audit reported zero vulnerabilities after reviewed dependency updates. Seventy-one TypeScript unit tests passed, plus six backup retention tests. Development board/report integration checks passed. Fresh production identity lookup and approval passed read-only. Recovery component browser check invoked Try again once, hid raw error text and fit a 390px viewport using compiled application CSS.
+
+Production backup/Dropbox download checksums and isolated database/file restoration passed for 25 tables and three PDFs, including cleanup. Production upload CORS preflight passed. Initial staged hosted sign-in/CSS/access checks passed; refreshed recovery deployment checks are recorded in the production preparation note. Signed-in hosted workflows and first scheduled production backup remain pending.
+
 November 2 Pilot form/email release: remote build/types passed; staged and stable HTTP checks verified correct Pilot/Clerk identity, assets and access denial without employee login. Pilot layout has no stored row and the new defaults meet the approved layout, so guarded apply was a no-op. Job Type Other-last ordering verified. New stable Ready deployment `dpl_8Yg6exs1abDaYyX48Wf76DchKPpf`; see `pilot-service-layout-release-2026-11-02.md`. npm audit's moderate findings were reviewed/documented separately, not fixed automatically. No real email sent. Kent's signed-in Pilot review follows refresh.
 
 ## November 2 — Service and Labor form/email revision

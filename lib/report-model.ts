@@ -1,3 +1,4 @@
+import { orderNumber } from "./order-number";
 import { Prisma } from "../generated/prisma/client";
 import { DateTime } from "luxon";
 import { normalizeSavedName } from "./saved-name-model";
@@ -76,7 +77,7 @@ export function buildReport(orders: ReportOrder[], filter: ReportFilter) {
     }
     if (issues.length) invalidOrders++; else subtotal = subtotal.plus(orderSum);
     matchingTotal = matchingTotal.plus(itemSum);
-    rows.push({ id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, name: order.name, date: fields.dateEntered, customer: fields.text_13__1 || "", store: fields.text_21__1 || "", status: fields.status, division: fields.division__1 || "", jobType: fields.dropdown__1 || "", scheduled: fields.start_job_date__1 || "", assigned: order.assignments.map(a => a.user.displayName || a.user.email).join(", "), subtotal: issues.length ? null : orderSum.toFixed(2), matching: invalidMatching ? null : itemSum.toFixed(2), issues });
+    rows.push({ id: order.id, number: orderNumber(order.number), name: order.name, date: fields.dateEntered, customer: fields.text_13__1 || "", store: fields.text_21__1 || "", status: fields.status, division: fields.division__1 || "", jobType: fields.dropdown__1 || "", scheduled: fields.start_job_date__1 || "", assigned: order.assignments.map(a => a.user.displayName || a.user.email).join(", "), subtotal: issues.length ? null : orderSum.toFixed(2), matching: invalidMatching ? null : itemSum.toFixed(2), issues });
   }
   rows.sort((a, b) => b.date.localeCompare(a.date) || b.number.localeCompare(a.number));
   return { rows, subtotal: invalidOrders ? null : subtotal.toFixed(2), matchingTotal: invalidProducts ? null : matchingTotal.toFixed(2), quantity: quantityTotal.toString(), invalidOrders, groups: [...groups.values()].map(group => ({ description: group.description, quantity: group.quantity.toString(), total: group.invalid ? null : group.total.toFixed(2), orders: group.orders.size })).sort((a, b) => a.description.localeCompare(b.description)) };

@@ -17,12 +17,11 @@ export function invitationEmail(value: unknown): string {
 }
 export function invitationConfiguration(env: Record<string, string | undefined>) {
   const mode = applicationMode(env);
-  if (mode === "pilot") runtimeEnvironment(env);
-  // No live invitation path is enabled until live rollout is authorized.
-  if (!env.CLERK_SECRET_KEY?.startsWith("sk_test_")) throw new InvitationError("Invitations are currently enabled only for the development Clerk instance.");
+  if (mode !== "development") runtimeEnvironment(env);
+  if (!env.CLERK_SECRET_KEY?.startsWith(mode === "production" ? "sk_live_" : "sk_test_")) throw new InvitationError("Invitation credentials do not match the application environment.");
   const allowed = mode === "pilot" ? pilotAllowlist(env.INVITATION_ALLOWED_RECIPIENTS) : (env.INVITATION_ALLOWED_RECIPIENTS || "").split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
   if (mode === "pilot" && !env.APP_URL) throw new InvitationError("Pilot invitations require a trusted hosted app origin.");
   const origin = new URL(env.APP_URL || "http://localhost:3000");
   if (origin.username || origin.password || origin.search || origin.hash || origin.pathname !== "/" || (origin.protocol !== "https:" && !(origin.protocol === "http:" && origin.hostname === "localhost"))) throw new InvitationError("Set APP_URL to the app's trusted origin.");
-  return { allowed, redirectUrl: new URL("/sign-up", origin).toString() };
+  return { allowed: mode === "production" ? null : allowed, redirectUrl: new URL("/sign-up", origin).toString() };
 }
