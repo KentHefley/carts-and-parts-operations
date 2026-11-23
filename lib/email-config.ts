@@ -7,6 +7,13 @@ const developmentRecipients = new Set([developmentRecipient, "jleo3140@gmail.com
 export class EmailPolicyError extends Error {}
 
 export function verifyEmailRecipients(recipients: string[], env: Record<string, string | undefined> = process.env) {
+  if (applicationMode(env) === "production") {
+    runtimeEnvironment(env);
+    if (!recipients.length || recipients.some(email => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+      throw new EmailPolicyError("A valid recipient is required.");
+    }
+    return;
+  }
   const allowed = applicationMode(env) === "pilot" ? new Set(pilotAllowlist(env.SO_EMAIL_ALLOWED_RECIPIENTS)) : developmentRecipients;
   if (!recipients.length || recipients.some(email => !allowed.has(email.toLowerCase()))) {
     throw new EmailPolicyError("Non-live email can only be sent to approved test recipients. Remove other assignees to test; nobody is redirected.");

@@ -1,7 +1,10 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 
 // Authenticate requests here; protect each page/action/API at its resource.
-export default clerkMiddleware({ signInUrl: "/sign-in" });
+export default clerkMiddleware({
+  signInUrl: "/sign-in",
+  ...(process.env.APP_ENV === "production" ? { authorizedParties: ["https://operations.cartsandparts.com"] } : {}),
+});
 
 export const config = {
   matcher: [

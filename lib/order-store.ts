@@ -1,3 +1,4 @@
+import { orderNumber } from "./order-number";
 import { Prisma, PrismaClient } from "../generated/prisma/client";
 import { fieldKeys, orderFields } from "./order-fields";
 import { chicagoDate, conflicts, ItemValue, OrderView, SaveRequest } from "./order-types";
@@ -11,7 +12,7 @@ import { itemNumberErrors, normalizeUnitPrice } from "./item-price";
 const include = { customAmounts: true, items: { orderBy: { position: "asc" as const } }, creator: { select: { email: true, displayName: true } }, assignments: { orderBy: { userId: "asc" as const } } };
 type StoredOrder = Prisma.SalesOrderGetPayload<{ include: typeof include }>;
 export function orderView(order: StoredOrder): OrderView {
-  return { id: order.id, number: `DEV-${String(order.number).padStart(6, "0")}`, creator: order.creator.displayName || order.creator.email,
+  return { id: order.id, number: orderNumber(order.number), creator: order.creator.displayName || order.creator.email,
     fields: { ...(order.fields as Record<string, string>), ...Object.fromEntries(order.customAmounts.map(value => [value.fieldKey, value.amount.toFixed(2)])), name: order.name ?? "" }, assigneeIds: order.assignments.map(assignment => assignment.userId),
     items: order.items.map(item => ({ description: item.description, quantity: item.quantity?.toString() ?? "", unitPrice: item.unitPrice?.toString() ?? "" })) };
 }

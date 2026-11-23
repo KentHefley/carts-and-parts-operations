@@ -1,5 +1,11 @@
 # Development backup and restoration verification
 
+## Production verification - November 23, 2026
+
+Production backup and isolated restore passed for 25 tables and three original PDFs. Archive production-177a15a07eca667085a79414.cnpbackup contains 14,606,434 file bytes; encrypted Dropbox copy is 14,277,095 bytes and its downloaded checksum matched. Temporary recovery database and R2 prefix cleanup passed. Production had zero orders and therefore zero order-attachment associations during this drill. The existing separate recovery key was reused.
+
+The production-backups GitHub environment has encrypted service/Dropbox/key secrets and main-only restrictions. The prepared workflow schedules daily backups at 11:17 UTC with production-only 30-day retention. Schedule activation awaits publishing and merging the workflow to main, followed by a successful hosted manual run. Existing implementation limits are 250MB raw files per archive and 150MB per encrypted Dropbox upload; streaming/upload-session support must be added before growth reaches those bounds. Failure stops retention cleanup and preserves the local archive.
+
 ## Active hosted verification
 
 Kent committed/pushed the workflow to main at `2cb937257446f83690d1b3f7e6fa3023ffc63a65`. GitHub reports the workflow active. First manual hosted run [38998359813](https://github.com/KentHefley/carts-and-parts-operations/actions/runs/38998359813) completed successfully: Ubuntu/Node/PostgreSQL installation, locked dependency installation, encrypted backup, private Dropbox upload, download identity/revision/SHA-256 verification and retention listing. Archive `development-c47665af922e78037d36fdea.cnpbackup` is 14,323,257 bytes; no recovery key uploaded and zero expired archives deleted. The daily 10:17 UTC schedule is enabled. This supersedes earlier inactive/pending-hosted notes below. The first timer-triggered run, actual deletion after 30 days and failure-notification delivery are still to be observed; enable Actions failure notifications and check backup freshness periodically.

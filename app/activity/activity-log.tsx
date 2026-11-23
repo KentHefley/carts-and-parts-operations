@@ -1,3 +1,4 @@
+import { orderNumber } from "../../lib/order-number";
 import { statusLabel } from "../../lib/order-status";
 import Link from "next/link";
 import { getDatabase } from "../../lib/db";
@@ -25,7 +26,7 @@ export async function ActivityLog({ orderId, cursor, dashboard = false }: { orde
     <p>Newest first. Times are Central (America/Chicago), adjusted automatically for daylight saving time. Related field edits within one minute are summarized; status and assignment changes remain separate.</p>
     {events.length === 0 && <p>No activity to display.</p>}
     <ol className="activity-list">{events.map(event => <li key={event.id}>
-      {!orderId && <p><Link href={`/orders/${event.order.id}`}>DEV-{String(event.order.number).padStart(6, "0")} · {event.order.name}</Link></p>}
+      {!orderId && <p><Link href={`/orders/${event.order.id}`}>{orderNumber(event.order.number)} · {event.order.name}</Link></p>}
       <strong>{event.actor.displayName || event.actor.email}</strong> · <time dateTime={event.createdAt.toISOString()}>{activityTimestamp(event.createdAt)}</time>
       <dl>{Object.entries(event.changes as Record<string, unknown>).filter(([key]) => key !== "commentId").map(([key, change]) => <div key={key}><dt>{change && typeof change === "object" && "label" in change && typeof change.label === "string" ? change.label : label(key)}</dt><dd>{changeDetails(key, change, names)}</dd></div>)}</dl>
     </li>)}</ol>

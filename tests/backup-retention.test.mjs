@@ -6,6 +6,15 @@ const now = Date.parse("2026-10-16T10:17:00Z");
 const name = (char) => `development-${char.repeat(24)}.cnpbackup`;
 const file = (char, age = 0) => ({ ".tag": "file", name: name(char), path_lower: `/${name(char)}`, id: `id:${char}`, rev: "abc123", server_modified: new Date(now - age * 86400_000).toISOString() });
 
+test("production retention preserves Pilot and Development archives", () => {
+  const oldDevelopment = file("a", 31);
+  const oldPilot = { ...file("b", 31), name: `pilot-${"b".repeat(24)}.cnpbackup`, path_lower: `/pilot-${"b".repeat(24)}.cnpbackup` };
+  const oldProduction = { ...file("c", 31), name: `production-${"c".repeat(24)}.cnpbackup`, path_lower: `/production-${"c".repeat(24)}.cnpbackup` };
+  assert.deepEqual(expiredBackups([oldDevelopment, oldPilot, oldProduction], `production-${"d".repeat(24)}.cnpbackup`, now, "production"), [oldProduction]);
+  assert.ok(backupPattern("production").test(oldProduction.name));
+  assert.equal(backupPattern("pilot").test(oldProduction.name), false);
+});
+
 test("pilot and development retention cannot delete each other's archives", async () => {
   const pilotFile = (char, age = 0) => { const entry = file(char, age); return { ...entry, name: entry.name.replace("development-", "pilot-"), path_lower: entry.path_lower.replace("development-", "pilot-") }; };
   const current = pilotFile("a");

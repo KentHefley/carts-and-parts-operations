@@ -15,7 +15,7 @@ const hash = (bytes: Buffer | string) => createHash("sha256").update(bytes).dige
 const quote = (name: string) => '"' + name.replaceAll('"', '""') + '"';
 const magic = Buffer.from("CNPBACK1");
 type FileEntry = { key: string; size: number; type: string; sha256: string; data: string };
-type BackupMode = "development" | "pilot";
+type BackupMode = "development" | "pilot" | "production";
 type Archive = { version: 1; environment?: BackupMode; capturedAt: string; dump: string; dumpHash: string; tables: Record<string, { count: number; sha256: string }>; files: FileEntry[] };
 
 function connection(databaseUrl: string, database = "neondb") {
@@ -106,7 +106,7 @@ async function backup(url: URL, mode: BackupMode) {
     for (const file of manifest.rows) {
       assert.ok(file.key.startsWith(`${mode}/`), "Unexpected storage namespace.");
       totalBytes += file.size;
-      assert.ok(totalBytes <= 250 * 1024 * 1024, "Pilot backup exceeds the in-memory 250 MB limit.");
+      assert.ok(totalBytes <= 250 * 1024 * 1024, "Backup exceeds the in-memory 250 MB limit.");
       const object = await storage.read(file.key);
       assert.ok(object.Body, "Stored file is missing.");
       const bytes = Buffer.from(await object.Body.transformToByteArray());

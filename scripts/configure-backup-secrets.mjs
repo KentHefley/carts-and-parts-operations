@@ -4,8 +4,8 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
 const repository = "KentHefley/carts-and-parts-operations";
-assert.ok(process.argv.slice(2).length === 0 || (process.argv.length === 3 && process.argv[2] === "--pilot"), "Use no option for development or --pilot for the pilot.");
-const mode = process.argv.includes("--pilot") ? "pilot" : "development";
+assert.ok(process.argv.slice(2).length === 0 || (process.argv.length === 3 && ["--pilot", "--production"].includes(process.argv[2])), "Use no option, --pilot, or --production.");
+const mode = process.argv.includes("--production") ? "production" : process.argv.includes("--pilot") ? "pilot" : "development";
 const environment = `${mode}-backups`;
 const endpoint = `repos/${repository}/environments/${environment}`;
 
@@ -28,23 +28,29 @@ async function gh(args, input, allowMissing = false) {
 }
 
 async function main() {
-  config({ path: mode === "pilot" ? ".env.pilot.local" : ".env.local", quiet: true });
+  config({ path: mode === "development" ? ".env.local" : `.env.${mode}.local`, quiet: true });
   // Dropbox credentials can be shared; application services always come from the selected file.
-  if (mode === "pilot") {
+  if (mode !== "development") {
     const { parse } = await import("dotenv");
     const development = parse(await readFile(".env.local"));
     for (const name of ["DROPBOX_APP_KEY", "DROPBOX_APP_SECRET"]) process.env[name] ||= development[name];
     for (const name of ["CLERK_SECRET_KEY", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"]) assert.notEqual(process.env[name], development[name]);
-    assert.equal(process.env.APP_ENV, "pilot"); assert.equal(process.env.NEXT_PUBLIC_APP_ENV, "pilot");
+    assert.equal(process.env.APP_ENV, mode); assert.equal(process.env.NEXT_PUBLIC_APP_ENV, mode);
   }
   config({ path: ".env.backup.local", quiet: true });
   const names = ["DATABASE_URL", "CLERK_SECRET_KEY", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "DROPBOX_APP_KEY", "DROPBOX_APP_SECRET", "DROPBOX_REFRESH_TOKEN"];
   for (const name of names) assert.ok(process.env[name]?.trim(), `${name} is missing.`);
   const db = new URL(process.env.DATABASE_URL);
   assert.equal(db.protocol, "postgresql:");
-  assert.equal(db.hostname, mode === "pilot" ? "ep-summer-frog-b5cbla8f-pooler.c-7.us-east-2.aws.neon.tech" : "ep-bold-sky-b5e3vwct-pooler.c-7.us-east-2.aws.neon.tech");
+  const hosts = { development: "ep-bold-sky-b5e3vwct-pooler.c-7.us-east-2.aws.neon.tech", pilot: "ep-summer-frog-b5cbla8f-pooler.c-7.us-east-2.aws.neon.tech", production: "ep-flat-boat-behrz8oq-pooler.c-9.us-east-2.aws.neon.tech" };
+  assert.equal(db.hostname, hosts[mode]);
   assert.equal(db.pathname, "/neondb");
-  assert.ok(process.env.CLERK_SECRET_KEY.startsWith("sk_test_") && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith("pk_test_"));
+  assert.ok(process.env.CLERK_SECRET_KEY.startsWith(mode === "production" ? "sk_live_" : "sk_test_")
+    && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith(mode === "production" ? "pk_live_" : "pk_test_"));
+  if (mode === "production") {
+    assert.equal(process.env.APP_URL, "https://operations.cartsandparts.com");
+    assert.equal(Buffer.from(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.slice(8), "base64").toString().replace(/\$$/, ""), "clerk.cartsandparts.com");
+  }
   assert.equal(process.env.R2_BUCKET_NAME, `carts-parts-operations-${mode}`);
   const key = await readFile(".recovery/backup.key");
   assert.equal(key.length, 32, "Existing recovery key is invalid.");

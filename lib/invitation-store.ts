@@ -19,10 +19,10 @@ async function locked<T>(db: PrismaClient, work: (tx: Prisma.TransactionClient) 
     return work(tx);
   }, { maxWait: 10_000, timeout: 30_000 });
 }
-export async function sendEmployeeInvitation(db: PrismaClient, provider: InvitationProvider, actorId: string, input: { id: string; email: string }, allowed: string[]) {
+export async function sendEmployeeInvitation(db: PrismaClient, provider: InvitationProvider, actorId: string, input: { id: string; email: string }, allowed: string[] | null) {
   const email = invitationEmail(input.email);
   if (!uuid.test(input.id)) throw new InvitationError("Invalid invitation request.");
-  if (!allowed.includes(email)) throw new InvitationError("This email is not on the development invitation allowlist. Add it to INVITATION_ALLOWED_RECIPIENTS in .env.local and restart the server.");
+  if (allowed !== null && !allowed.includes(email)) throw new InvitationError("This email is not on the invitation allowlist. Update the environment's invitation recipients and restart the server.");
   const prepared = await locked(db, async tx => {
     await admin(tx, actorId);
     const retry = await tx.employeeInvitation.findUnique({ where: { id: input.id } });

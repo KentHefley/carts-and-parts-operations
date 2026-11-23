@@ -1,5 +1,11 @@
 # Project progress
 
+## November 23 - Production preparation
+
+Kent approved operations.cartsandparts.com, empty orders/calendars, existing Pilot settings/books and first SO 25000. Separate production Neon/R2/Clerk services and Vercel project were enrolled; schema initialized, protected Super Admin provisioned and three original PDFs copied with checksum verification. Production settings preserve 28 choices, 83 fields, four people and four categories. Orders and events are empty. Work is on codex/production-preparation-2026-11-23.
+
+Added exact production target/preview rejection guards, plain production order numbers across views/search/reports/notifications, live email/invitation configuration, bounded transient Clerk identity recovery and an application recovery screen. Reviewed security patches brought npm audit to zero findings. Seventy-one unit tests, six retention tests, Development board/report regressions, production identity/CORS checks and isolated encrypted backup restoration passed. Production backup secrets configured; workflow publication/merge and hosted run remain pending. Details and staged release IDs are in production-preparation-2026-11-23.md. Custom-domain activation, signed-in hosted verification and initial live launch approval remain pending.
+
 ## November 2 — reviewed form/email changes deployed to Pilot
 
 Kent authorized release after Development review. Promoted Ready `dpl_8Yg6exs1abDaYyX48Wf76DchKPpf` to the normal pilot URL. Remote build/types and staged/stable identity/asset/access checks passed. Pilot uses default layout version 0 with no stored layout row: no layout/order/email-snapshot write or migration was needed. Verified retired controls, Miles placement and Job Type Other-last settings using the approved defaults/settings read path. See `pilot-service-layout-release-2026-11-02.md` for rollback and release evidence.

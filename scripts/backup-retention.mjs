@@ -1,6 +1,6 @@
 export const backupNamePattern = /^development-[a-f0-9]{24}\.cnpbackup$/;
 export function backupPattern(mode = "development") {
-  if (mode !== "development" && mode !== "pilot") throw new Error("Unsupported backup environment.");
+  if (mode !== "development" && mode !== "pilot" && mode !== "production") throw new Error("Unsupported backup environment.");
   return new RegExp(`^${mode}-[a-f0-9]{24}\\.cnpbackup$`);
 }
 

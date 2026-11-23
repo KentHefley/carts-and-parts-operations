@@ -8,7 +8,7 @@ export async function clerkInvitationProvider(): Promise<InvitationProvider> {
   const client = await clerkClient();
   return {
     create: (email, id) => {
-      if (!configuration.allowed.includes(email)) throw new Error("Recipient is not allowed.");
+      if (configuration.allowed !== null && !configuration.allowed.includes(email)) throw new Error("Recipient is not allowed.");
       return client.invitations.createInvitation({ emailAddress: email, ignoreExisting: false, notify: true, expiresInDays: 30, redirectUrl: configuration.redirectUrl, publicMetadata: { operationsInvitationId: id } });
     },
     find: async (email, id) => {

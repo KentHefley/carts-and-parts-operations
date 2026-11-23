@@ -1,23 +1,26 @@
 import { Prisma, type PrismaClient } from "../generated/prisma/client";
+import { applicationMode } from "./environment-policy";
 import { ORDER_BOARD_PAGE_SIZE, parseBoardQuery, type BoardCursor, type BoardFilters, type BoardPage, type BoardRow } from "./order-board-model";
 
 type StoredRow = BoardRow & { sortDate: string; createdAt: Date };
 
 export async function readOrderBoard(database: PrismaClient, actorId: string, input: BoardFilters, after: BoardCursor | null = null): Promise<BoardPage> {
   const { filters, cursor } = parseBoardQuery(input, after);
+  const number = applicationMode() === "production" ? Prisma.sql`o.number::text`
+    : Prisma.sql`'DEV-' || lpad(o.number::text, GREATEST(6, length(o.number::text)), '0')`;
   // Only constant SQL fragments; all search values and cursor parts are parameters.
   const membership = filters.completed ? Prisma.sql`o.fields->>'status' IN ('Complete', 'Voided')` : Prisma.sql`o.fields->>'status' IN ('Pending', 'In Progress', 'Expedite')`;
   const date = filters.completed ? Prisma.sql`COALESCE(o.fields->>'statusChangedAt', '')` : Prisma.sql`COALESCE(o.fields->>'dateEntered', '')`;
   const where = Prisma.sql`o."deletedAt" IS NULL AND o.name IS NOT NULL AND ${membership}
     AND position(lower(${filters.name}) in lower(o.name)) > 0
-    AND position(lower(${filters.number}) in lower('DEV-' || lpad(o.number::text, GREATEST(6, length(o.number::text)), '0'))) > 0
+    AND position(lower(${filters.number}) in lower(${number})) > 0
     ${filters.status ? Prisma.sql`AND o.fields->>'status' = ${filters.status}` : Prisma.empty}`;
   const boundary = cursor ? Prisma.sql`AND (${date}, o."createdAt", o.id) < (${cursor.date}, ${cursor.createdAt}::timestamp, ${cursor.id}::uuid)` : Prisma.empty;
   return database.$transaction(async tx => {
     const actor = await tx.appUser.findUnique({ where: { id: actorId } });
     if (!actor?.active || actor.loginDeletedAt || actor.loginDeletionRequestedAt) throw new Error("Approved access required.");
     const rows = await tx.$queryRaw<StoredRow[]>(Prisma.sql`
-      SELECT o.id, 'DEV-' || lpad(o.number::text, GREATEST(6, length(o.number::text)), '0') AS number, o.name,
+      SELECT o.id, ${number} AS number, o.name,
         o.fields->>'status' AS status, COALESCE(o.fields->>'division__1', '') AS division,
         COALESCE(o.fields->>'dropdown__1', '') AS "jobType", COALESCE(o.fields->>'start_job_date__1', '') AS scheduled,
         COALESCE((SELECT string_agg(COALESCE(NULLIF(u."displayName", ''), u.email) || CASE WHEN u.active THEN '' ELSE ' (inactive)' END, ', '
